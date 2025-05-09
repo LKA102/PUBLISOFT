@@ -1,41 +1,4 @@
-// // src/modules/publicaciones/services/publicacionesService.js
-// let publicaciones = [];
-
-// export const publicacionesService = {
-//   async subir({ titulo, archivo, usuario }) {
-//     const id = Date.now().toString();
-//     const nueva = {
-//       id,
-//       titulo,
-//       archivoUrl: URL.createObjectURL(archivo),
-//       usuario,
-//       fecha: new Date(),
-//       rating: 0,
-//       votos: 0,
-//     };
-//     publicaciones.push(nueva);
-//     return nueva;
-//   },
-
-//   async eliminar(id) {
-//     publicaciones = publicaciones.filter(p => p.id !== id);
-//   },
-
-//   async calificar(id, estrellas) {
-//     const pub = publicaciones.find(p => p.id === id);
-//     if (pub) {
-//       pub.rating = ((pub.rating * pub.votos) + estrellas) / (pub.votos + 1);
-//       pub.votos += 1;
-//     }
-//   },
-
-//   async obtenerTendencias() {
-//     return [...publicaciones].sort((a, b) => (b.rating + b.votos) - (a.rating + a.votos));
-//   }
-// };
-
-
-// src/modules/publicaciones/services/publicacionesService.js
+import * as pdfConverter from './pdfConverter';
 
 const STORAGE_KEY = 'publisoft_publicaciones';
 
@@ -47,22 +10,40 @@ function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+
 export const publicacionesService = {
   async subir({ titulo, archivo, usuario }) {
     const publicaciones = getData();
     const id = Date.now().toString();
-    const nueva = {
-      id,
-      titulo,
-      archivoUrl: URL.createObjectURL(archivo),
-      usuario,
-      fecha: new Date(),
-      rating: 0,
-      votos: 0,
-    };
-    publicaciones.push(nueva);
-    saveData(publicaciones);
-    return nueva;
+    
+    try {
+      // Convertir a PDF
+      const pdfBlob = await pdfConverter.convertToPDF(archivo);
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Generar vista previa
+      const previewUrl = await pdfConverter.generateThumbnail(pdfBlob);
+      
+      const nueva = {
+        id,
+        titulo: titulo || 'Apuntes sin título',
+        archivoUrl: pdfUrl,
+        previewUrl,
+        usuario,
+        fecha: new Date(),
+        rating: 0,
+        votos: 0,
+        tipo: archivo.type,
+        nombreOriginal: archivo.name
+      };
+      
+      publicaciones.push(nueva);
+      saveData(publicaciones);
+      return nueva;
+    } catch (error) {
+      console.error('Error en subir publicación:', error);
+      throw error;
+    }
   },
 
   async eliminar(id) {

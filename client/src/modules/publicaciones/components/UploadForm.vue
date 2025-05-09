@@ -26,7 +26,7 @@
         <v-icon x-large color="blue" class="mr-3">mdi-file-document</v-icon>
         <div>
           <div class="font-weight-bold">{{ archivo?.name }}</div>
-          <div class="text-caption">{{ formatFileSize(archivo?.size) }}</div>
+          <div class="text-caption">Se convertirá a PDF</div>
         </div>
       </div>
     </v-card>
@@ -79,19 +79,11 @@ const handleFileChange = (file) => {
     return;
   }
   
-  // Crear URL de previsualización
   if (file.type.startsWith('image/')) {
     previewUrl.value = URL.createObjectURL(file);
   } else {
     previewUrl.value = null;
   }
-};
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return '';
-  if (bytes < 1024) return bytes + ' bytes';
-  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  else return (bytes / 1048576).toFixed(1) + ' MB';
 };
 
 const handleUpload = async () => {
@@ -102,7 +94,7 @@ const handleUpload = async () => {
   
   try {
     await subir({
-      titulo: titulo.value || 'Apuntes sin título',
+      titulo: titulo.value,
       archivo: archivo.value,
       usuario: 'Usuario Demo'
     });

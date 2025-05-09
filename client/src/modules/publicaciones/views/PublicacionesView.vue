@@ -11,10 +11,9 @@
         <span class="font-weight-bold">Usuario Demo</span>
       </div>
       
-      <!-- Menú de perfil FUNCIONAL -->
-      <v-menu offset-y transition="slide-y-transition" :close-on-content-click="false">
+      <v-menu offset-y transition="slide-y-transition">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn icon v-bind="attrs" v-on="on" data-testid="profile-menu-btn">
+          <v-btn icon v-bind="attrs" v-on="on">
             <v-avatar size="36" color="white">
               <v-icon dark>mdi-account</v-icon>
             </v-avatar>
@@ -22,19 +21,6 @@
         </template>
         
         <v-card width="250">
-          <v-list>
-            <v-list-item>
-              <v-list-item-avatar>
-                <v-icon>mdi-account</v-icon>
-              </v-list-item-avatar>
-              <v-list-item-content>
-                <v-list-item-title>Usuario Demo</v-list-item-title>
-              </v-list-item-content>
-            </v-list-item>
-          </v-list>
-          
-          <v-divider></v-divider>
-          
           <v-list dense>
             <v-list-item @click="menuAction('profile')">
               <v-list-item-icon>
@@ -64,44 +50,84 @@
     </v-app-bar>
 
     <v-main style="padding-top: 64px;">
-      <v-container fluid class="pa-4" style="max-width: 800px; width: 100%; margin: 0 auto;">
-        <!-- Área de publicación -->
-        <v-card class="mb-6" elevation="2">
+      <v-container fluid class="pa-4" style="max-width: 800px; margin: 0 auto;">
+        <!-- Área de publicación con skeleton loader -->
+        <v-card class="mb-6" elevation="2" :loading="loading">
           <v-card-text class="text-center py-4">
             <p class="text-h6 mb-4">¿Tienes apuntes que quieras compartir?</p>
-            <UploadForm />
+            <UploadForm @upload-complete="handleUploadComplete" />
           </v-card-text>
         </v-card>
 
-        <!-- Lista de publicaciones -->
-        <v-row>
-          <v-col cols="12">
-            <PublicationCard
-              v-for="pub in state.publicaciones"
-              :key="pub.id"
-              :publicacion="pub"
-              @eliminar="eliminar"
-              @calificar="calificar"
-            />
-          </v-col>
-        </v-row>
+        <!-- Lista de publicaciones con skeleton loader -->
+        <template v-if="state.publicaciones.length > 0">
+          <PublicationCard
+            v-for="pub in state.publicaciones"
+            :key="pub.id"
+            :publicacion="pub"
+            @eliminar="handleEliminar"
+            @calificar="handleCalificar"
+          />
+        </template>
+        <template v-else>
+          <v-card v-for="n in 3" :key="`skeleton-${n}`" class="mb-4">
+            <v-skeleton-loader type="card"></v-skeleton-loader>
+          </v-card>
+        </template>
       </v-container>
     </v-main>
   </v-app>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import UploadForm from '../components/UploadForm.vue';
 import PublicationCard from '../components/PublicationCard.vue';
 import { usePublicaciones } from '../store/publicacionesStore';
 
 const { state, cargar, eliminar, calificar } = usePublicaciones();
-cargar();
+const loading = ref(false);
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    await cargar();
+  } catch (error) {
+    console.error('Error cargando publicaciones:', error);
+  } finally {
+    loading.value = false;
+  }
+});
 
 const menuAction = (action) => {
   console.log(`Menú seleccionado: ${action}`);
-  // Aquí puedes agregar lógica para cada acción
+};
+
+const handleUploadComplete = async () => {
+  loading.value = true;
+  try {
+    await cargar();
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleEliminar = async (id) => {
+  loading.value = true;
+  try {
+    await eliminar(id);
+    await cargar();
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleCalificar = async (id, estrellas) => {
+  try {
+    await calificar(id, estrellas);
+  } catch (error) {
+    console.error('Error calificando:', error);
+  }
 };
 </script>
 
@@ -111,13 +137,8 @@ const menuAction = (action) => {
   min-height: calc(100vh - 64px);
 }
 
-.v-container {
-  padding: 0 16px;
-}
-
-@media (min-width: 960px) {
-  .v-container {
-    padding: 0 24px;
-  }
+/* Transición suave para las cards */
+.v-card {
+  transition: opacity 0.3s ease;
 }
 </style>
