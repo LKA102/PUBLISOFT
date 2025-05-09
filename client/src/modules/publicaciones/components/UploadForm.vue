@@ -1,25 +1,119 @@
 <template>
-  <v-card class="pa-4 mb-4">
-    <v-form @submit.prevent="handleUpload">
-      <v-text-field v-model="titulo" label="Título" required></v-text-field>
-      <v-file-input v-model="archivo" label="Selecciona archivo" required></v-file-input>
-      <v-btn type="submit" color="primary">Subir</v-btn>
-    </v-form>
-  </v-card>
+  <div>
+    <v-file-input
+      v-model="archivo"
+      label="Selecciona tus apuntes (PDF, Word, imágenes)"
+      prepend-icon="mdi-paperclip"
+      outlined
+      dense
+      :rules="fileRules"
+      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+      @change="handleFileChange"
+    ></v-file-input>
+
+    <v-text-field
+      v-model="titulo"
+      label="Título (opcional)"
+      outlined
+      dense
+      class="mb-3"
+    ></v-text-field>
+
+    <!-- Previsualización -->
+    <v-card v-if="previewUrl" outlined class="mb-3">
+      <v-img v-if="esImagen" :src="previewUrl" max-height="200" contain></v-img>
+      <div v-else class="d-flex align-center pa-3">
+        <v-icon x-large color="blue" class="mr-3">mdi-file-document</v-icon>
+        <div>
+          <div class="font-weight-bold">{{ archivo?.name }}</div>
+          <div class="text-caption">{{ formatFileSize(archivo?.size) }}</div>
+        </div>
+      </div>
+    </v-card>
+
+    <v-btn
+      color="primary"
+      block
+      :disabled="!archivo"
+      :loading="loading"
+      @click="handleUpload"
+    >
+      Compartir apuntes
+    </v-btn>
+
+    <v-alert v-if="error" type="error" dense class="mt-3">
+      {{ error }}
+    </v-alert>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { usePublicaciones } from '../store/publicacionesStore';
 
 const titulo = ref('');
 const archivo = ref(null);
+const previewUrl = ref(null);
+const error = ref('');
+const loading = ref(false);
 const { subir } = usePublicaciones();
 
+const esImagen = computed(() => {
+  return archivo.value?.type.startsWith('image/');
+});
+
+const fileRules = [
+  value => !value || 
+    value.type === 'application/pdf' || 
+    value.type === 'application/msword' ||
+    value.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    value.type === 'image/jpeg' || 
+    value.type === 'image/png' || 
+    'Solo se permiten archivos PDF, Word o imágenes'
+];
+
+const handleFileChange = (file) => {
+  error.value = '';
+  if (!file) {
+    previewUrl.value = null;
+    return;
+  }
+  
+  // Crear URL de previsualización
+  if (file.type.startsWith('image/')) {
+    previewUrl.value = URL.createObjectURL(file);
+  } else {
+    previewUrl.value = null;
+  }
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' bytes';
+  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  else return (bytes / 1048576).toFixed(1) + ' MB';
+};
+
 const handleUpload = async () => {
-  if (!titulo.value || !archivo.value) return;
-  await subir({ titulo: titulo.value, archivo: archivo.value, usuario: 'anónimo' });
-  titulo.value = '';
-  archivo.value = null;
+  if (!archivo.value) return;
+  
+  loading.value = true;
+  error.value = '';
+  
+  try {
+    await subir({
+      titulo: titulo.value || 'Apuntes sin título',
+      archivo: archivo.value,
+      usuario: 'Usuario Demo'
+    });
+    
+    titulo.value = '';
+    archivo.value = null;
+    previewUrl.value = null;
+  } catch (err) {
+    error.value = 'Error al subir el archivo: ' + err.message;
+  } finally {
+    loading.value = false;
+  }
 };
 </script>

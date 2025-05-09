@@ -3,10 +3,11 @@
     <v-icon
       v-for="n in 5"
       :key="n"
-      :color="n <= hover || n <= valor ? 'yellow' : 'grey'"
+      :color="n <= hover || n <= valor ? 'blue' : 'grey lighten-1'"
       @click="emit('rate', n)"
       @mouseover="hover = n"
       @mouseleave="hover = 0"
+      small
     >mdi-star</v-icon>
   </div>
 </template>
