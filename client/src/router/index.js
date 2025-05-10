@@ -1,29 +1,39 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import PublicacionesView from '../modules/publicaciones/views/PublicacionesView.vue' // 👈
+import { useAuthStore } from '../modules/auth/store/authStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      redirect: '/publicaciones'
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/login',
+      name: 'Login',
+      component: () => import('../modules/auth/views/LoginView.vue'),
+      meta: { requiresGuest: true }
     },
     {
       path: '/publicaciones',
       name: 'Publicaciones',
-      component: PublicacionesView, // 👈
+      component: () => import('../modules/publicaciones/views/PublicacionesView.vue')
     },
-  ],
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/publicaciones'
+    }
+  ]
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (to.meta.requiresGuest && authStore.isAuthenticated) {
+    next('/publicaciones') // Solo redirige si intenta acceder a login estando autenticado
+  } else {
+    next() // Permite el acceso en otros casos
+  }
 })
 
 export default router

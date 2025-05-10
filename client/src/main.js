@@ -19,6 +19,11 @@ function initApp() {
 
   app.mount('#app')
 
+  // Opcional: Limpiar localStorage en desarrollo al iniciar
+if (import.meta.env.MODE === 'development') {
+  localStorage.clear()
+}
+
 }
 
 initApp();
