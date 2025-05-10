@@ -80,23 +80,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
 import UploadForm from '../components/UploadForm.vue';
 import PublicationCard from '../components/PublicationCard.vue';
+// DESPUÉS (Green Software)
 import { usePublicaciones } from '../store/publicacionesStore';
+import { ref, onMounted, onUnmounted } from 'vue';
 
-const { state, cargar, eliminar, calificar } = usePublicaciones();
 const loading = ref(false);
+const { state, cargar, eliminar, calificar } = usePublicaciones();
+// Carga inicial diferida
+let loadTimeout;
+onMounted(() => {
+  loadTimeout = setTimeout(cargar, 300); // Diferido para permitir render inicial
+});
 
-onMounted(async () => {
-  loading.value = true;
-  try {
-    await cargar();
-  } catch (error) {
-    console.error('Error cargando publicaciones:', error);
-  } finally {
-    loading.value = false;
-  }
+// Limpieza
+onUnmounted(() => {
+  clearTimeout(loadTimeout);
+  // Liberar URLs de objetos (importante para imágenes/PDFs)
+  state.publicaciones.forEach(pub => {
+    if (pub.archivoUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(pub.archivoUrl);
+    }
+  });
 });
 
 const menuAction = (action) => {

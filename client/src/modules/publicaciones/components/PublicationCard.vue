@@ -38,11 +38,24 @@
         
         <!-- Miniaturas -->
         <v-img
+          v-if="esImagen"
           :src="publicacion.previewUrl"
           height="150"
           contain
           class="mx-auto preview-image"
+          loading="lazy"
         ></v-img>
+        
+        <!-- Previsualización para PDF -->
+        <iframe
+          v-else-if="esPDF"
+          :src="publicacion.archivoUrl"
+          width="100%"
+          height="150"
+          frameborder="0"
+          class="pdf-preview"
+          loading="lazy"
+        ></iframe>
       </v-card>
     </div>
 
@@ -77,14 +90,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue'; // Añadido computed
 import RatingStars from './RatingStars.vue';
 
 const props = defineProps(['publicacion']);
 const emit = defineEmits(['eliminar', 'calificar']);
 const showFullDocument = ref(false);
 
-const fecha = new Date(props.publicacion.fecha).toLocaleString();
+const fecha = computed(() => new Date(props.publicacion.fecha).toLocaleString());
+
+const esImagen = computed(() => {
+  if (!props.publicacion.archivoUrl) return false;
+  return props.publicacion.archivoUrl.startsWith('blob:image/') || 
+         ['jpg', 'jpeg', 'png', 'webp'].some(ext => 
+           props.publicacion.archivoUrl.includes(ext)
+         );
+});
+
+const esPDF = computed(() => props.publicacion.archivoUrl?.match(/\.pdf$/i));
+
+// Eliminado tipoArchivo ya que no se usa
 </script>
 
 <style scoped>
@@ -100,5 +125,10 @@ const fecha = new Date(props.publicacion.fecha).toLocaleString();
 .preview-image {
   border-top: 1px solid #eee;
   background-color: #f5f5f5;
+}
+
+.pdf-preview {
+  border: none;
+  margin-top: 8px;
 }
 </style>
