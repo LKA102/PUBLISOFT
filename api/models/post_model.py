@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Float, Integer, String, DateTime
-from database import Base
+from database.db import Base
 from datetime import datetime
 
 class PostModel(Base):
