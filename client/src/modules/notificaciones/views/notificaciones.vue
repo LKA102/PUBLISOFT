@@ -2,7 +2,6 @@
   <div class="notificaciones-container">
     <Cabecera />
     <div class="contenido-notificaciones">
-      <!-- notificaciones -->
     </div>
   </div>
 </template>
@@ -20,6 +19,7 @@ export default {
 
 <style scoped>
 .notificaciones-container {
+  width: 100%; /* Asegura que ocupe todo el ancho */
   background-color: white; /* Fondo blanco */
   min-height: 100vh; /* Asegura que ocupe toda la altura de la pantalla */
 }
