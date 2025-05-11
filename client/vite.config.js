@@ -10,6 +10,10 @@ import fonts from 'unplugin-fonts/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  optimizeDeps: {
+    // Excluir estas dependencias del bundling
+    exclude: ['pdf-lib', '@pdf-lib/fontkit']
+  },
   plugins: [
     vue({
       template: { transformAssetUrls }

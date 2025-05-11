@@ -7,13 +7,22 @@ const state = reactive({
 });
 
 export const usePublicaciones = () => {
+ // DESPUÉS (Green Software)
+  let lastUpdate = 0;
+
   const cargar = async () => {
+    // Evita recargas frecuentes (mínimo 30 segundos entre actualizaciones)
+    const now = Date.now();
+    if (now - lastUpdate < 30000 && state.publicaciones.length > 0) return;
+    
     state.publicaciones = await publicacionesService.obtenerTendencias();
+    lastUpdate = now;
+    
   };
 
   const subir = async (datos) => {
-    await publicacionesService.subir(datos);
-    await cargar();
+  await publicacionesService.subir(datos);
+  state.publicaciones = [...await publicacionesService.obtenerTendencias()]; 
   };
 
   const eliminar = async (id) => {
