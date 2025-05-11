@@ -1,4 +1,4 @@
-from config import settings
+from config.settings import settings
 from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
