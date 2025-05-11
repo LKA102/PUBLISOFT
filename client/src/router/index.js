@@ -24,8 +24,8 @@ const router = createRouter({
     },
     {
       path: '/notificaciones',
-      name: 'Notificaciones',
-      component: NotificationsView,
+      name: 'notificaciones',
+      component: notificaciones,
     },
 
   ],
