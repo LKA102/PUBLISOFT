@@ -39,7 +39,7 @@ jobs:
 
         - name: Deploy API to Cloud Run
           run: |
-            gcloud builds submit ./api --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/api
+            gcloud builds submit ./api --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/api --project ${{ secrets.GCP_PROJECT_ID }}
             gcloud run deploy api \
               --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/api \
               --platform managed \
@@ -59,7 +59,7 @@ jobs:
 
         - name: Deploy Client to Cloud Run
           run: |
-            gcloud builds submit ./client --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/client
+            gcloud builds submit ./client --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/client --project ${{ secrets.GCP_PROJECT_ID }}
             gcloud run deploy client \
               --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/client \
               --platform managed \
