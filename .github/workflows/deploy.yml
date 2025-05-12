@@ -37,6 +37,11 @@ jobs:
           run: |
             echo "${{ secrets.PROD_ENV_API }}" > ./api/.env
 
+        - name: Verify .env File
+          run: |
+            ls -la ./api/.env
+            cat ./api/.env
+
         - name: Authenticate with Google Cloud
           uses: google-github-actions/auth@v1
           with:
@@ -61,6 +66,11 @@ jobs:
         - name: Create .env File
           run: |
             echo "${{ secrets.PROD_ENV_CLIENT }}" > ./client/.env
+
+        - name: Verify .env File
+          run: |
+            ls -la ./client/.env
+            cat ./client/.env
 
         - name: Authenticate with Google Cloud
           uses: google-github-actions/auth@v1
