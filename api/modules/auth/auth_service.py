@@ -23,7 +23,6 @@ class AuthService:
         if not response:
             raise Exception(f"Error logging in user: {response.error.message}")
         
-        print(response)
         
         # Extract user data from the response
         session = response.session
