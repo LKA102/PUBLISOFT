@@ -112,8 +112,8 @@ jobs:
           
         - name: Update Nginx config with correct URLs
           run: |
-            sed -i "s|https://frontend-url.a.run.app|https://$(gcloud run services describe client --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
-            sed -i "s|https://backend-url.a.run.app|https://$(gcloud run services describe api --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
+            sed -i "s|https://frontend-url.a.run.app|$(gcloud run services describe client --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
+            sed -i "s|https://backend-url.a.run.app|$(gcloud run services describe api --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
         
         - name: Deploy Nginx Gateway
           run: |
