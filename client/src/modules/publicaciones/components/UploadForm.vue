@@ -72,19 +72,48 @@ const fileRules = [
     'Solo se permiten archivos PDF, Word o imágenes'
 ];
 
-const handleFileChange = (file) => {
-  error.value = '';
-  if (!file) {
-    previewUrl.value = null;
-    return;
-  }
+// DESPUÉS (Green Software)
+const handleFileChange = async (file) => {
+  if (!file) return;
   
+  // Optimización para imágenes
   if (file.type.startsWith('image/')) {
-    previewUrl.value = URL.createObjectURL(file);
-  } else {
-    previewUrl.value = null;
+    try {
+      const optimizedImage = await compressImage(file);
+      previewUrl.value = URL.createObjectURL(optimizedImage);
+    } catch {
+      previewUrl.value = URL.createObjectURL(file);
+    }
   }
 };
+
+// Helper para compresión
+async function compressImage(file, maxWidth = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(maxWidth / img.width, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(
+          (blob) => resolve(blob || file),
+          'image/webp',
+          quality
+        );
+      };
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 
 const handleUpload = async () => {
   if (!archivo.value) return;

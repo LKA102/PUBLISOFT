@@ -11,7 +11,8 @@ import fonts from 'unplugin-fonts/vite'
 // https://vite.dev/config/
 export default defineConfig({
   optimizeDeps: {
-    exclude: ['@pdf-lib/fontkit']
+    // Excluir estas dependencias del bundling
+    exclude: ['pdf-lib', '@pdf-lib/fontkit']
   },
   plugins: [
     vue({

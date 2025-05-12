@@ -2,12 +2,25 @@ import * as pdfConverter from './pdfConverter';
 
 const STORAGE_KEY = 'publisoft_publicaciones';
 
+let cache = null; // Cache en memoria para reducir acceso a localStorage
+
 function getData() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  if (!cache) {
+    const rawData = localStorage.getItem(STORAGE_KEY);
+    cache = rawData ? JSON.parse(rawData) : [];
+  }
+  return cache;
 }
 
+let saveTimeout = null; 
 function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  cache = [...data];
+  if (!saveTimeout) {  
+    saveTimeout = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      saveTimeout = null; 
+    }, 500);
+  }
 }
 
 
