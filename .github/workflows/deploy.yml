@@ -1,7 +1,12 @@
 name: Publisoft deplyment
 
 on:
-    workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
