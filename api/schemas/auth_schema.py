@@ -5,3 +5,7 @@ class UserRegister(BaseModel):
     email: str
     password: str
     role: RoleEnum
+    
+class UserLogin(BaseModel):
+    email: str
+    password: str
