@@ -23,11 +23,13 @@ class AuthService:
         if not response:
             raise Exception(f"Error logging in user: {response.error.message}")
         
+        print(response)
+        
         # Extract user data from the response
-        session = response.get("session")
-        supabase_access_token = session.get("access_token")
-        supabase_refresh_token = session.get("refresh_token")
-        expires_in = session.get("expires_in")
+        session = response.session
+        supabase_access_token = session.access_token
+        supabase_refresh_token = session.refresh_token
+        expires_in = session.expires_in
         
         # Fetch additional user data (e.g., role) from your database
         user_entity = self.user_repo.get_by_email(email)
@@ -36,7 +38,7 @@ class AuthService:
         
         # Create own custom JWT payload
         payload = {
-            "id_user": user_entity.id_user,
+            "id_user": str(user_entity.id_user),
             "email": str(user_entity.email),
             "role": user_entity.id_role,
             "user_code": user_entity.user_code,
