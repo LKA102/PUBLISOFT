@@ -3,40 +3,84 @@ name: Publisoft deplyment
 on:
     workflow_dispatch:
 
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v3
 
-            - name: Set up SSH
-              env:
-                SSH_PRIVATE_KEY: ${{ vars.SSH_PRIVATE_KEY }}
-                GCP_SERVER_HOST: ${{ vars.GCP_SERVER_HOST }}
-                GCP_SERVER_USER: ${{ vars.GCP_SERVER_USER }}
-              run: |
-                mkdir -p ~/.ssh
-                echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-                chmod 600 ~/.ssh/id_rsa
-                ssh-keyscan -H $GCP_SERVER_HOST >> ~/.ssh/known_hosts
+    setup:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions.checkout@v3
 
-            - name: Copy Project to GCP Server
-              run: |
-                rsync -avz --delete --exclude='.git' --exclude='*.log' --exclude='*.env' ./ ${{ vars.GCP_SERVER_USER }}@${{ vars.GCP_SERVER_HOST }}:/home/$GCP_SERVER_USER/publisoft/
-                
-            - name: Set up Environment Files
-              run: |
-                cd /home/${{ vars.GCP_SERVER_USER }}/publisoft/
-                echo "${{ vars.STAGING_ENV }}" > .env
-                echo "${{ vars.STAGING_ENV_API }}" > ./api/.env
-                echo "${{ vars.STAGING_ENV_CLIENT }}" > ./client/.env
-            
-            - name: Build and Deploy Docker Containers
-              run: |
-                ssh ${{ vars.GCP_SERVER_USER }}@${{ vars.GCP_SERVER_HOST }} << 'EOF'
-                    cd /home/${{ vars.GCP_SERVER_USER }}/publisoft/
-                    docker-compose down
-                    docker-compose build
-                    docker-compose up -d
-                EOF
+        - name: Authenticate with Google Cloud
+          uses: google-github-actions/auth@v1
+          with:
+            credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+        - name: Set up Google Cloud SDK
+          uses: google-github-actions/setup-gcloud@v1
+
+
+    deploy-api:
+      needs: [setup]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v3
+
+        - name: Create .env File
+          run: |
+            echo "${{ secrets.PROD_ENV_API }}" > ./api/.env
+
+        - name: Deploy API to Cloud Run
+          run: |
+            gcloud builds submit ./api --tag gcr.io/$PROJECT_ID/api
+            gcloud run deploy api \
+              --image gcr.io/$PROJECT_ID/api \
+              --platform managed \
+              --region $REGION \
+              --allow-unauthenticated
+
+    deploy-client:
+      needs: [setup]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v3
+
+        - name: Create .env File
+          run: |
+            echo "${{ secrets.PROD_ENV_CLIENT }}" > ./client/.env
+
+        - name: Deploy Client to Cloud Run
+          run: |
+            gcloud builds submit ./client --tag gcr.io/$PROJECT_ID/client
+            gcloud run deploy client \
+              --image gcr.io/$PROJECT_ID/client \
+              --platform managed \
+              --region $REGION \
+              --allow-unauthenticated
+
+    deploy-nginx:
+      needs: [deploy-api, deploy-client]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v3
+          
+        - name: Update Nginx config with correct URLs
+          run: |
+            sed -i "s|https://frontend-url.a.run.app|https://$(gcloud run services describe client --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
+            sed -i "s|https://backend-url.a.run.app|https://$(gcloud run services describe api --platform managed --region $REGION --format='value(status.url)')|g" nginx/default.conf
+        
+        - name: Deploy Nginx Gateway
+          run: |
+            gcloud builds submit ./nginx --tag gcr.io/$PROJECT_ID/my-gateway
+            gcloud run deploy my-gateway \
+              --image gcr.io/$PROJECT_ID/my-gateway \
+              --platform managed \
+              --region $REGION \
+              --allow-unauthenticated
