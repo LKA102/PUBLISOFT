@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
 
 jobs:
@@ -40,9 +39,9 @@ jobs:
 
         - name: Deploy API to Cloud Run
           run: |
-            gcloud builds submit ./api --tag gcr.io/$PROJECT_ID/api
+            gcloud builds submit ./api --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/api
             gcloud run deploy api \
-              --image gcr.io/$PROJECT_ID/api \
+              --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/api \
               --platform managed \
               --region $REGION \
               --allow-unauthenticated
@@ -60,9 +59,9 @@ jobs:
 
         - name: Deploy Client to Cloud Run
           run: |
-            gcloud builds submit ./client --tag gcr.io/$PROJECT_ID/client
+            gcloud builds submit ./client --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/client
             gcloud run deploy client \
-              --image gcr.io/$PROJECT_ID/client \
+              --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/client \
               --platform managed \
               --region $REGION \
               --allow-unauthenticated
@@ -81,9 +80,9 @@ jobs:
         
         - name: Deploy Nginx Gateway
           run: |
-            gcloud builds submit ./nginx --tag gcr.io/$PROJECT_ID/my-gateway
+            gcloud builds submit ./nginx --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-gateway
             gcloud run deploy my-gateway \
-              --image gcr.io/$PROJECT_ID/my-gateway \
+              --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-gateway \
               --platform managed \
               --region $REGION \
               --allow-unauthenticated
