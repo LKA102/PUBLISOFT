@@ -12,9 +12,9 @@ jobs:
 
             - name: Set up SSH
               env:
-                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                GCP_SERVER_HOST: ${{ secrets.GCP_SERVER_HOST }}
-                GCP_SERVER_USER: ${{ secrets.GCP_SERVER_USER }}
+                SSH_PRIVATE_KEY: ${{ vars.SSH_PRIVATE_KEY }}
+                GCP_SERVER_HOST: ${{ vars.GCP_SERVER_HOST }}
+                GCP_SERVER_USER: ${{ vars.GCP_SERVER_USER }}
               run: |
                 mkdir -p ~/.ssh
                 echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -23,12 +23,19 @@ jobs:
 
             - name: Copy Project to GCP Server
               run: |
-                rsync -avz --delete --exclude='.git' --exclude='*.log' --exclude='*.env' ./ $GCP_SERVER_USER@$GCP_SERVER_HOST:/home/$GCP_SERVER_USER/publisoft/
+                rsync -avz --delete --exclude='.git' --exclude='*.log' --exclude='*.env' ./ ${{ vars.GCP_SERVER_USER }}@${{ vars.GCP_SERVER_HOST }}:/home/$GCP_SERVER_USER/publisoft/
                 
+            - name: Set up Environment Files
+              run: |
+                cd /home/${{ vars.GCP_SERVER_USER }}/publisoft/
+                echo "${{ vars.STAGING_ENV }}" > .env
+                echo "${{ vars.STAGING_ENV_API }}" > ./api/.env
+                echo "${{ vars.STAGING_ENV_CLIENT }}" > ./client/.env
+            
             - name: Build and Deploy Docker Containers
               run: |
-                ssh ${{ secrets.GCP_SERVER_USER }}@${{ secrets.GCP_SERVER_HOST }} << 'EOF'
-                    cd /path/to/your/project
+                ssh ${{ vars.GCP_SERVER_USER }}@${{ vars.GCP_SERVER_HOST }} << 'EOF'
+                    cd /home/${{ vars.GCP_SERVER_USER }}/publisoft/
                     docker-compose down
                     docker-compose build
                     docker-compose up -d
