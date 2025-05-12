@@ -1,0 +1,35 @@
+name: Publisoft deployment
+
+on:
+    workflow_dispatch:
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v3
+
+            - name: Set up SSH
+              env:
+                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+                GCP_SERVER_HOST: ${{ secrets.GCP_SERVER_HOST }}
+                GCP_SERVER_USER: ${{ secrets.GCP_SERVER_USER }}
+              run: |
+                mkdir -p ~/.ssh
+                echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+                chmod 600 ~/.ssh/id_rsa
+                ssh-keyscan -H $GCP_SERVER_HOST >> ~/.ssh/known_hosts
+
+            - name: Copy Project to GCP Server
+              run: |
+                rsync -avz --delete --exclude='.git' --exclude='*.log' --exclude='*.env' ./ $GCP_SERVER_USER@$GCP_SERVER_HOST:/home/$GCP_SERVER_USER/publisoft/
+                
+            - name: Build and Deploy Docker Containers
+              run: |
+                ssh ${{ secrets.GCP_SERVER_USER }}@${{ secrets.GCP_SERVER_HOST }} << 'EOF'
+                    cd /path/to/your/project
+                    docker-compose down
+                    docker-compose build
+                    docker-compose up -d
+                EOF
