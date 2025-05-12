@@ -1,8 +1,8 @@
 FROM python:3.12
 
-RUN mkdir /app
+RUN mkdir /api
 
-WORKDIR /app
+WORKDIR /api
 
 COPY requirements.txt .
 
