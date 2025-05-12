@@ -52,7 +52,7 @@ jobs:
               --allow-unauthenticated
 
     deploy-client:
-      needs: [setup]
+      needs: [deploy-api]
       runs-on: ubuntu-latest
       steps:
         - name: Checkout Code
