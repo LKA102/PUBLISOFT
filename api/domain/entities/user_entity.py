@@ -1,8 +1,9 @@
 from domain.value_objects.email_vo import EmailVO
 from enums.role_enum import RoleEnum
+from uuid import UUID
 
 class UserEntity:
-    def __init__(self, id_user: int, email: EmailVO, id_state: int, id_role: int, user_code: str):
+    def __init__(self, id_user: UUID, email: EmailVO, id_state: int, id_role: int, user_code: str):
         self.id_user = id_user
         self.email = email
         self.id_role = id_role
