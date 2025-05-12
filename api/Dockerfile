@@ -1,13 +1,15 @@
 FROM python:3.12
 
-RUN mkdir /app
+RUN mkdir /api
 
-WORKDIR /app
+WORKDIR /api
 
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
 
 COPY . .
+
+COPY .env /api/.env
 
 CMD ["uvicorn", "main:app", "--host=0.0.0.0", "--port=8080"]

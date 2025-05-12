@@ -1,7 +1,7 @@
 # stage1 as builder
 FROM node:22.15 as builder
 
-WORKDIR /vue
+WORKDIR /client
 
 # Copy package.json and install dependencies
 COPY package*.json ./
@@ -9,6 +9,8 @@ RUN npm install
 
 # Copy rest of the files
 COPY . .
+
+COPY .env /client/.env
 
 # Build the project
 RUN npm run build
@@ -21,6 +23,6 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy from stage 1
-COPY --from=builder /vue/dist /usr/share/nginx/html
+COPY --from=builder /client/dist /usr/share/nginx/html
 
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
