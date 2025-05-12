@@ -10,8 +10,6 @@ RUN npm install
 # Copy rest of the files
 COPY . .
 
-COPY ./client/.env /client/.env
-
 # Build the project
 RUN npm run build
 
