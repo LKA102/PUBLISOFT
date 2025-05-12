@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from modules.auth import auth_controller
 from modules.notifications import notifications_controller
 from modules.users import users_controller
-from modules.posts import posts_controller
+from modules.posts import posts_contoller
 from modules.ranking import ranking_controller
 
 

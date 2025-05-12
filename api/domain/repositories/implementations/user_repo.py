@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from models.user_model import UserModel
-from entities.user_entity import UserEntity
-from repositories.interfaces.user_interface_repo import UserRepositoryInterface
+from domain.entities.user_entity import UserEntity
+from domain.repositories.interfaces.user_interface_repo import UserRepositoryInterface
 
 class UserRepository(UserRepositoryInterface):
     def __init__(self, db: Session):

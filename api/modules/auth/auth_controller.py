@@ -29,7 +29,7 @@ def register(register_data: UserRegister, db: Session = Depends(get_db)):
         user = auth_service.register_user(
             email=register_data.email,
             password=register_data.password,
-            role=register_data.role
+            role=register_data.role.value
         )
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
@@ -43,6 +43,7 @@ def register(register_data: UserRegister, db: Session = Depends(get_db)):
             }
         )
     except Exception as e:
+        print(e.with_traceback())
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
