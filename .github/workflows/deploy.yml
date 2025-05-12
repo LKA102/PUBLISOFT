@@ -25,6 +25,15 @@ jobs:
         - name: Set up Google Cloud SDK
           uses: google-github-actions/setup-gcloud@v1
 
+        - name: Set Active Account
+          run: |
+            gcloud auth list
+            gcloud config set account $(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+
+        - name: Set GCP Project
+          run: |
+            gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
 
     deploy-api:
       needs: [setup]
