@@ -1,0 +1,12 @@
+services:
+  client:
+    container_name: ${DOCKER_PROJECT_ENVIRONMENT}.publisoft.client
+    build: client/
+    ports:
+      - ${DOCKER_PROJECT_CLIENT_PORT}:80
+
+  api:
+    container_name: ${DOCKER_PROJECT_ENVIRONMENT}.publisoft.api
+    build: api/
+    ports:
+      - ${DOCKER_PROJECT_API_PORT}:80
