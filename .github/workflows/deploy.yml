@@ -82,6 +82,11 @@ jobs:
       steps:
         - name: Checkout Code
           uses: actions/checkout@v3
+
+        - name: Authenticate with Google Cloud
+          uses: google-github-actions/auth@v1
+          with:
+            credentials_json: ${{ secrets.GCP_SA_KEY }}
           
         - name: Update Nginx config with correct URLs
           run: |
@@ -90,7 +95,7 @@ jobs:
         
         - name: Deploy Nginx Gateway
           run: |
-            gcloud builds submit ./nginx --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-gateway
+            gcloud builds submit ./nginx --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-gateway --project ${{ secrets.GCP_PROJECT_ID }}
             gcloud run deploy my-gateway \
               --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-gateway \
               --platform managed \
