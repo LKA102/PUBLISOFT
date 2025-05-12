@@ -5,6 +5,8 @@ from enums.state_enum import StateEnum
 from supabase import create_client
 from config.settings import global_supabase_client
 from shared.utils import get_supabase_client
+import random
+import string
 
 class AuthService:
     def __init__(self, user_repo: UserRepositoryInterface):
@@ -22,12 +24,13 @@ class AuthService:
 
         # Extract user data from the response
         user_data = response.user
+
         user_entity = UserEntity(
             id_user=user_data.id,
             email=EmailVO(email),
             id_role=role,
             id_state=StateEnum.ACTIVO.value,
-            user_code=user_data.user_metadata.get("user_code", "default_code")
+            user_code=''.join(random.choices(string.ascii_uppercase + string.digits, k=8)) #This is temporary, should be replaced with a proper user code generation logic
         )
 
         # Save the user to the database
