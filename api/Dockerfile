@@ -1,8 +1,8 @@
-FROM python:3.11
+FROM python:3.12
 
-RUN mkdir /app
+RUN mkdir /api
 
-WORKDIR /app
+WORKDIR /api
 
 COPY requirements.txt .
 
@@ -10,6 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-RUN chmod +x /entrypoint.sh
-
-CMD ["/entrypoint.sh"]
+CMD ["uvicorn", "main:app", "--host=0.0.0.0", "--port=8080"]

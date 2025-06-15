@@ -1,8 +1,13 @@
 // src/modules/publicaciones/services/pdfConverter.js
 
 // Importación desde CDN con alias para fontkit
-const { PDFDocument, rgb } = await import('https://cdn.skypack.dev/pdf-lib');
-const fontkit = await import('https://cdn.skypack.dev/@pdf-lib/fontkit');
+async function loadModules() {
+  const { PDFDocument, rgb } = await import('https://cdn.skypack.dev/pdf-lib');
+  const fontkit = await import('https://cdn.skypack.dev/@pdf-lib/fontkit');
+  return { PDFDocument, rgb, fontkit };
+}
+
+const {PDFDocument, rgb, fontkit} = loadModules();
 
 // Función para convertir archivos a PDF
 export const convertToPDF = async (file) => {
@@ -13,12 +18,12 @@ export const convertToPDF = async (file) => {
   try {
     // Crear nuevo documento PDF
     const pdfDoc = await PDFDocument.create();
-    
+
     // Registrar fontkit con el nombre correcto
     pdfDoc.registerFontkit(fontkit.default);
-    
+
     const page = pdfDoc.addPage([550, 750]);
-    
+
     // Agregar título
     page.drawText(`Documento convertido: ${file.name}`, {
       x: 50,
@@ -32,18 +37,18 @@ export const convertToPDF = async (file) => {
       try {
         const imageBytes = await file.arrayBuffer();
         let image;
-        
+
         if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
           image = await pdfDoc.embedJpg(imageBytes);
         } else if (file.type === 'image/png') {
           image = await pdfDoc.embedPng(imageBytes);
         }
-        
+
         // Escalar imagen para que quepa
         const scale = Math.min(450 / image.width, 600 / image.height);
         const width = image.width * scale;
         const height = image.height * scale;
-        
+
         page.drawImage(image, {
           x: 50,
           y: 700 - height - 20, // 20px debajo del título
@@ -60,10 +65,10 @@ export const convertToPDF = async (file) => {
         });
       }
     }
-    
+
     const pdfBytes = await pdfDoc.save();
     return new Blob([pdfBytes], { type: 'application/pdf' });
-    
+
   } catch (error) {
     console.error('Error en convertToPDF:', error);
     throw new Error(`Error al convertir a PDF: ${error.message}`);
@@ -76,21 +81,21 @@ export const generateThumbnail = async (pdfBlob) => {
   canvas.width = 200;
   canvas.height = 280;
   const ctx = canvas.getContext('2d');
-  
+
   // Fondo
   ctx.fillStyle = '#f5f5f5';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   // Icono de documento
   ctx.fillStyle = '#1976D2';
   ctx.font = 'bold 24px Arial';
   ctx.fillText('PDF', 80, 150);
-  
+
   // Texto
   ctx.fillStyle = '#333';
   ctx.font = '12px Arial';
   ctx.fillText('Vista previa', 70, 180);
-  
+
   return canvas.toDataURL('image/jpeg');
 };
 
