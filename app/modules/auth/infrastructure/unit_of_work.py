@@ -1,4 +1,4 @@
-from app.modules.auth.application.unit_of_work import AbstractUnitOfWork
+from app.modules.auth.application.abstract_unit_of_work import AbstractUnitOfWork
 
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session_factory):
@@ -7,7 +7,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __enter__(self):
         self.session = self.session_factory()
         # repositories can be initialized here if needed, e.g.:
-        # self.user_repository = UserRepository(session=self.session)
+        self.user_repository = UserRepository(session=self.session)
 
     def __exit__(self, *args):
         super().__exit__(args)
