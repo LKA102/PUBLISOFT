@@ -1,6 +1,5 @@
 from app.modules.auth.domain.entities.base_entity import BaseEntity
 from typing import List, Optional
-from uuid import UUID
 from app.modules.auth.domain.value_objects.vo import EmailVO, UserCodeVO, PasswordHashVO
 import enum
 
@@ -17,7 +16,6 @@ class UserRoleEnum(str, enum.Enum):
 class User(BaseEntity):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.__id: UUID = kwargs.get('user_id')
         self.__email: EmailVO = kwargs.get('email')
         self.__hash_password: PasswordHashVO = kwargs.get('hash_password')
         self.__state: UserStateEnum = kwargs.get('state', UserStateEnum.ACTIVE)
@@ -28,15 +26,11 @@ class User(BaseEntity):
     def __eq__(self, other):
         if not isinstance(other, User):
             return False
-        return self.user_id == other.user_id
+        return self.id == other.id
     
     def __hash__(self):
-        return hash(self.user_id)
-    
-    @property
-    def user_id(self) -> UUID:
-        return self.__id
-    
+        return hash(self.id)
+
     @property
     def email(self) -> EmailVO:
         return self.__email

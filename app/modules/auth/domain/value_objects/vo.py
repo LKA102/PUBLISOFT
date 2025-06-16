@@ -43,6 +43,18 @@ class UserCodeVO:
     def __str__(self):
         return self.user_code
     
+    # Temporary method
+    @classmethod
+    def generate_user_code(cls) -> 'UserCodeVO':
+        """
+        Generate a random user code.
+        For simplicity, let's assume the user code is a random alphanumeric string of length 10.
+        """
+        import random
+        import string
+        user_code = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        return cls(user_code=user_code)
+    
     @classmethod
     def is_valid_user_code(cls, user_code: str) -> bool:
         """

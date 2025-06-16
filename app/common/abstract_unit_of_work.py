@@ -6,9 +6,6 @@ class AbstractUnitOfWork(ABC):
     Abstract base class for unit of work.
     This class should be inherited by concrete implementations.
     """
-    
-    # Repositories can be defined here if needed, e.g.:
-    # user_repository: UserRepository
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:  # solo si hubo excepción
@@ -30,11 +27,9 @@ class AbstractUnitOfWork(ABC):
         """
         raise NotImplementedError("Rollback method must be implemented by subclass.")
 
+    @abstractmethod
     def collect_events(self):
         """
         Collect events from the repositories.
         """
-        pass
-        # for repo in self.repo.seen:
-        #     while repo.events:
-        #         yield repo.events.pop()
+        raise NotImplementedError("Collect events method must be implemented by subclass.")
