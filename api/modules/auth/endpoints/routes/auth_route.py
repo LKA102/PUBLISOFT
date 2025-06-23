@@ -92,5 +92,11 @@ def login_user(login_data: UserLogin, response: Response, uok: SqlAlchemyUnitOfW
             status_code=500,
             content={"detail": "An unexpected error occurred"}
         )
+    
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("accesstoken")
+    return {"msg": "Logout successful"}
+
 
   
