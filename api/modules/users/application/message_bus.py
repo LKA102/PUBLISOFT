@@ -1,0 +1,1 @@
+# Here we will implement the message bus for the auth module (if needed).
