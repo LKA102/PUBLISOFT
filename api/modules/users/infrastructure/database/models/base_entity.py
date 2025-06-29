@@ -1,4 +1,4 @@
-from modules.auth.domain.entities.base_entity import BaseEntity
+from modules.users.domain.entities.base_entity import BaseEntity
 from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 import uuid

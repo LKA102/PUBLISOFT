@@ -13,7 +13,7 @@ class UserCommandHandler:
          with uok:
             # Create value objects
             email = EmailVO(command.email)
-            hash_password = PasswordHashVO.hash_password(command.password)
+            hash_password = PasswordHashVO.generate_hash_password(command.password)
             user_code = UserCodeVO.generate_user_code()
 
             # Create the user entity

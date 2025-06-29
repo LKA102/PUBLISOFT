@@ -78,7 +78,7 @@ class PasswordHashVO:
         return isinstance(hash_password, str) and len(hash_password) > 0
 
     @staticmethod
-    def hash_password(password: str) -> 'PasswordHashVO':
+    def generate_hash_password(password: str) -> 'PasswordHashVO':
         """
         Hash the given password using bcrypt.
         """

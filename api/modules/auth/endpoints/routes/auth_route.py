@@ -31,7 +31,7 @@ def register_user(
 
         # Respuesta exitosa
         return JSONResponse(
-            status_code=201,
+            status_code=status.HTTP_201_CREATED,
             content={"message": "User registered successfully"}
         )
     except APIHTTPException as e:
@@ -45,7 +45,7 @@ def register_user(
         # Manejo de excepciones genéricas
         print(f"Unexpected error: {e}")
         return JSONResponse(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "An unexpected error occurred"}
         )
 
@@ -72,7 +72,7 @@ def login_user(login_data: UserLogin, response: Response, uok: SqlAlchemyUnitOfW
         )
 
         return JSONResponse(
-            status_code=200,
+            status_code=status.HTTP_200_OK,
             content={"message": "Login successful", "accesstoken": accesstoken}
         )
         
@@ -89,7 +89,7 @@ def login_user(login_data: UserLogin, response: Response, uok: SqlAlchemyUnitOfW
         print(f"Unexpected error: {e}")
         print(traceback.format_exc())
         return JSONResponse(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "An unexpected error occurred"}
         )
     

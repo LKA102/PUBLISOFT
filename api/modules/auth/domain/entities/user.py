@@ -19,10 +19,10 @@ class UserRoleEnum(str, enum.Enum):
 class User(BaseEntity):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.__email: EmailVO = kwargs.get('email')
-        self.__hash_password: PasswordHashVO = kwargs.get('hash_password')
+        self.__email: EmailVO = kwargs.get('email', "")
+        self.__hash_password: PasswordHashVO = kwargs.get('hash_password', "")
         self.__state: UserStateEnum = kwargs.get('state', UserStateEnum.ACTIVE)
-        self.__user_code: UserCodeVO = kwargs.get('user_code')
+        self.__user_code: UserCodeVO = kwargs.get('user_code', "")
         self.__role: UserRoleEnum = kwargs.get('role', UserRoleEnum.STUDENT)
         self.events = set()
 
@@ -34,6 +34,8 @@ class User(BaseEntity):
     def __hash__(self):
         return hash(self.id)
 
+    # region GETTERS AND SETTERS
+
     @property
     def email(self) -> EmailVO:
         return self.__email
@@ -43,7 +45,6 @@ class User(BaseEntity):
         if not isinstance(value, EmailVO):
             raise ValueError("Email must be an instance of EmailVO")
         self.__email = value
-        self._update()  # Update the entity when email changes  
 
     @property
     def hash_password(self) -> PasswordHashVO:
@@ -54,7 +55,6 @@ class User(BaseEntity):
         if not isinstance(value, PasswordHashVO):
             raise ValueError("Hash password must be an instance of PasswordHashVO")
         self.__hash_password = value
-        self._update()
     
     @property
     def state(self) -> UserStateEnum:
@@ -65,7 +65,6 @@ class User(BaseEntity):
         if not isinstance(value, UserStateEnum):
             raise ValueError("State must be an instance of UserStateEnum")
         self.__state = value
-        self._update()
     
     @property
     def user_code(self) -> UserCodeVO:
@@ -76,7 +75,6 @@ class User(BaseEntity):
         if not isinstance(value, UserCodeVO):
             raise ValueError("User code must be an instance of UserCodeVO")
         self.__user_code = value
-        self._update()
     
     @property
     def role(self) -> str:
@@ -87,7 +85,8 @@ class User(BaseEntity):
         if not isinstance(value, UserRoleEnum):
             raise ValueError("Role must be an instance of UserRoleEnum")
         self.__role= value
-        self._update()
+
+    # endregion
 
     @classmethod
     def create(cls, email: EmailVO, hash_password: PasswordHashVO, user_code: UserCodeVO, 
@@ -120,8 +119,6 @@ class User(BaseEntity):
         # Emit UserCreated event
         user_create_event = UserCreatedEvent(
             user_id=user.id,
-            user_code=user.user_code.user_code,
-            email=user.email.email,
             name=extra_data.get('name'),
             last_name=extra_data.get('last_name')
         )
