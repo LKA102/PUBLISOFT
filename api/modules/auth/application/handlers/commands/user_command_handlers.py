@@ -1,7 +1,7 @@
-from modules.auth.domain.commands.user_commands import RegisterUserCommand, LoginUserCommand
+from modules.auth.domain.commands.user_commands import RegisterUserCommand, LoginUserCommand, UpdateUserCommand, DisableUserCommand
 from modules.auth.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
 from modules.auth.domain.value_objects.vo import PasswordHashVO, UserCodeVO, EmailVO
-from modules.auth.domain.entities.user import User, UserStateEnum
+from modules.auth.domain.entities.user import User, UserStateEnum, UserRoleEnum
 from modules.auth.domain.services.user_services import validar_credenciales
 from config.settings import settings
 from jose import jwt 
@@ -15,6 +15,7 @@ class UserCommandHandler:
             email = EmailVO(command.email)
             hash_password = PasswordHashVO.generate_hash_password(command.password)
             user_code = UserCodeVO.generate_user_code()
+            role = UserRoleEnum.STUDENT if command.role == 0 else UserRoleEnum.ADMIN
 
             # Create the user entity
             user = User.create(
@@ -23,6 +24,7 @@ class UserCommandHandler:
                 user_code=user_code,
                 name=command.name,
                 last_name=command.last_name,
+                role=role
             )
 
             # Persist the user entity
@@ -55,3 +57,28 @@ class UserCommandHandler:
             # Return the accesstoken
             return accesstoken
              
+    @staticmethod
+    def handle_update_user_command(command: UpdateUserCommand, uok: SqlAlchemyUnitOfWork):
+        with uok:
+            user = uok.user_repository.load(command.user_id)
+            if not user:
+                raise ValueError("User not found")
+
+            if command.email:
+                user.email = EmailVO(command.email)
+            if command.password:
+                user.hash_password = PasswordHashVO.generate_hash_password(command.password)
+
+            uok.user_repository.update(user)
+            uok.commit()
+            
+    @staticmethod
+    def handle_disable_user_command(command: DisableUserCommand, uok: SqlAlchemyUnitOfWork):
+        with uok:
+            user = uok.user_repository.load(command.user_id)
+            if not user:
+                raise ValueError("User not found")
+
+            user.state = UserStateEnum.DISABLED
+            uok.user_repository.update(user)
+            uok.commit()

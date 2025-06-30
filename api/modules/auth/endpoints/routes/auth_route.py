@@ -18,12 +18,14 @@ def register_user(
     message_bus: MessageBus = Depends(get_message_bus)
 ):
     try:
+        
         # Crear el comando para registrar al usuario
         command = RegisterUserCommand(
             email=register_data.email,
             password=register_data.password,
             name=register_data.name,
-            last_name=register_data.last_name
+            last_name=register_data.last_name,
+            role=register_data.role
         )
 
         # Enviar el comando al MessageBus

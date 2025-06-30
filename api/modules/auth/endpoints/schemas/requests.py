@@ -5,6 +5,7 @@ class UserRegister(BaseModel):
     password: str
     name: str
     last_name: str
+    role: int = 0 # Default role is Student (0)
     
 class UserLogin(BaseModel):
     email:  str

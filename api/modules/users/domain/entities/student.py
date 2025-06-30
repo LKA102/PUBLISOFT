@@ -1,5 +1,6 @@
 from modules.users.domain.entities.base_entity import BaseEntity
 from modules.users.domain.events.student_events import *
+from modules.users.domain.services.services import validate_email_format
 from typing import List, Optional
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
@@ -9,8 +10,8 @@ class Student(BaseEntity):
         super().__init__(**kwargs)
         self.__name: str = kwargs.get('name', "")
         self.__last_name: str = kwargs.get('last_name', "")
-        self.__career: str = kwargs.get('career', "")
-        self.__faculty: str = kwargs.get('faculty', "")
+        self.__career: Optional[str] = kwargs.get('career', None)
+        self.__faculty: Optional[str] = kwargs.get('faculty', None)
         self.events = set()
 
     def __eq__(self, other):
@@ -44,22 +45,12 @@ class Student(BaseEntity):
         self.__last_name = value
 
     @property
-    def profile_image_path(self) -> str:
-        return self.__profile_image_path
-    
-    @profile_image_path.setter
-    def profile_image_path(self, value: str):
-        if not isinstance(value, str):
-            raise ValueError("Profile image path must be a string")
-        self.__profile_image_path = value
-
-    @property
     def career(self) -> str:
         return self.__career
     
     @career.setter
-    def career(self, value: str):
-        if not isinstance(value, str):
+    def career(self, value: Optional[str]):
+        if not isinstance(value, str) and value is not None:
             raise ValueError("Career must be a string")
         self.__career = value
 
@@ -68,8 +59,8 @@ class Student(BaseEntity):
         return self.__faculty
     
     @faculty.setter
-    def faculty(self, value: str):
-        if not isinstance(value, str):
+    def faculty(self, value: Optional[str]):
+        if not isinstance(value, str) and value is not None:
             raise ValueError("Faculty must be a string")
         self.__faculty = value
 
@@ -107,15 +98,24 @@ class Student(BaseEntity):
             self.faculty = faculty
         
         self._update()
+        
+        email = extra_data.get('email')
+        password = extra_data.get('password')
+        
+        if email is not None or password is not None:
+            
+            if email is not None:
+                if not validate_email_format(email):
+                    raise ValueError("Invalid email format")
 
-        # Emit StudentUpdated event
-        student_updated_event = StudentUpdatedEvent(
-            student_id=self.id,
-            email = extra_data.get('email'),
-            password = extra_data.get('password'),
-        )
+            # Emit StudentUpdated event
+            student_updated_event = StudentUpdatedEvent(
+                student_id=self.id,
+                email=email,
+                password=password,
+            )
 
-        self.events.add(student_updated_event)
+            self.events.add(student_updated_event)
 
     def disable_account(self) -> None:
         
