@@ -4,5 +4,5 @@ from modules.users.endpoints.routers.student_router import router as student_rou
 
 router = APIRouter()
 
-router.include_router(admin_router, prefix="/admins", tags=["admins"])
-router.include_router(student_router, prefix="/students", tags=["students"])
+router.include_router(admin_router, prefix="/admins", tags=["users"])
+router.include_router(student_router, prefix="/students", tags=["users"])

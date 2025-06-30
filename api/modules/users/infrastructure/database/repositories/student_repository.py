@@ -10,8 +10,8 @@ class StudentRepositorySQLAlchemy(IStudentRepository):
         super().__init__()
         self.session = session
 
-    def _save(self, student: Student) -> Student:
-        student_orm = StudentMapper.to_orm(student, self.session)
+    def _save(self, student: Student, **kwargs) -> Student:
+        student_orm = StudentMapper.to_orm(student, **kwargs)
         self.session.add(student_orm)
         return student
 
@@ -25,14 +25,15 @@ class StudentRepositorySQLAlchemy(IStudentRepository):
         students_orm = self.session.query(StudentSQLAlchemy).all()
         return {StudentMapper.to_entity(student_orm) for student_orm in students_orm}
 
-    def _update(self, student: Student) -> Optional[Student]:
-        student_orm = StudentMapper.to_orm(student, self.session)
+    def _update(self, student: Student, **kwargs) -> Optional[Student]:
+        student_orm = StudentMapper.to_orm(student, **kwargs)
         existing_student_orm = self.session.query(StudentSQLAlchemy).filter_by(id=student.id).first()
         if existing_student_orm:
             existing_student_orm.name = student_orm.name
-            existing_student_orm.email = student_orm.email
-            existing_student_orm.state = student_orm.state
-            existing_student_orm.student_code = student_orm.student_code
+            existing_student_orm.last_name = student_orm.last_name
+            existing_student_orm.profile_image_path = student_orm.profile_image_path
+            existing_student_orm.faculty = student_orm.faculty
+            existing_student_orm.career = student_orm.career
             StudentSQLAlchemy.base_entity_to_orm(student, existing_student_orm)
             return StudentMapper.to_entity(existing_student_orm)
         else:

@@ -12,7 +12,7 @@ class AbstractMessageBus(ABC):
 
     def __init__(self):
         self._results = []
-        self.__messages_queue = []
+        self._messages_queue = []
 
     @classmethod
     def register_command_handler(cls, command_name, handler):
@@ -23,20 +23,20 @@ class AbstractMessageBus(ABC):
         if not handler:
             raise ValueError(f"No handler registered for command: {type(command)}")
         result = handler(command, uok)
-        self.__messages_queue.extend(uok.collect_events())
+        self._messages_queue.extend(uok.collect_events())
         return result
 
     @classmethod
-    def register_event_handler(cls, event_name, handler):
-        cls._event_handlers[event_name] = handler
+    def register_event_handler(cls, event_name, handlers):
+        cls._event_handlers[event_name] = handlers
 
     def _handle_event(self, event, uok: AbstractUnitOfWork):
         handlers = self._event_handlers.get(type(event), [])
         for handler in handlers:
             handler(event, uok)
-            self.__messages_queue.extend(uok.collect_events())
-        
-    @abstractmethod        
+            self._messages_queue.extend(uok.collect_events())
+
+    @abstractmethod
     def handle(self, message, uok: AbstractUnitOfWork):
         """
         Handle a message (command or event).

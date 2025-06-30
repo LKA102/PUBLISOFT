@@ -14,13 +14,16 @@ from modules.auth.application.handlers.events.user_event_handlers import UserEve
 
 class MessageBus(AbstractMessageBus):
     def handle(self, message, uok: AbstractUnitOfWork):
-        self.__messages_queue = [message]
-        while self.__messages_queue:
-            current_message = self.__messages_queue.pop(0)
+        self._results = []
+        self._messages_queue.append(message)
+        while self._messages_queue:
+            current_message = self._messages_queue.pop(0)
             if isinstance(current_message, Command):
+                print(f"Processing command: {current_message}")
                 cmd_result = self._handle_command(current_message, uok)
                 self._results.append(cmd_result)
             elif isinstance(current_message, Event):
+                print(f"Processing event: {current_message}")
                 self._handle_event(current_message, uok)
             else:
                 raise ValueError(f"Unknown message type: {type(current_message)}")
@@ -29,6 +32,8 @@ class MessageBus(AbstractMessageBus):
 # Commands registration
 MessageBus.register_command_handler(RegisterUserCommand, UserCommandHandler.handle_create_user_command)
 MessageBus.register_command_handler(LoginUserCommand, UserCommandHandler.handle_login_user_command)
+MessageBus.register_command_handler(UpdateUserCommand, UserCommandHandler.handle_update_user_command)
+MessageBus.register_command_handler(DisableUserCommand, UserCommandHandler.handle_disable_user_command)
 
 # Events registration
-MessageBus.register_event_handler(UserCreatedEvent, UserEventHandler.handle_user_created_event)
+MessageBus.register_event_handler(UserCreatedEvent, [UserEventHandler.handle_user_created_event])

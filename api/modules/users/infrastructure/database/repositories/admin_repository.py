@@ -10,8 +10,8 @@ class AdminRepositorySQLAlchemy(IAdminRepository):
         super().__init__()
         self.session = session
 
-    def _save(self, admin: Admin) -> Admin:
-        admin_orm = AdminMapper.to_orm(admin, self.session)
+    def _save(self, admin: Admin, **kwargs) -> Admin:
+        admin_orm = AdminMapper.to_orm(admin, **kwargs)
         self.session.add(admin_orm)
         return admin
 
@@ -25,14 +25,14 @@ class AdminRepositorySQLAlchemy(IAdminRepository):
         admins_orm = self.session.query(AdminSQLAlchemy).all()
         return {AdminMapper.to_entity(admin_orm) for admin_orm in admins_orm}
 
-    def _update(self, admin: Admin) -> Optional[Admin]:
-        admin_orm = AdminMapper.to_orm(admin, self.session)
+    def _update(self, admin: Admin, **kwargs) -> Optional[Admin]:
+        admin_orm = AdminMapper.to_orm(admin, **kwargs)
         existing_admin_orm = self.session.query(AdminSQLAlchemy).filter_by(id=admin.id).first()
         if existing_admin_orm:
             existing_admin_orm.name = admin_orm.name
-            existing_admin_orm.email = admin_orm.email
-            existing_admin_orm.state = admin_orm.state
-            existing_admin_orm.admin_code = admin_orm.admin_code
+            existing_admin_orm.last_name = admin_orm.last_name
+            existing_admin_orm.profile_image_path = admin_orm.profile_image_path
+            existing_admin_orm.faculty = admin_orm.faculty
             AdminSQLAlchemy.base_entity_to_orm(admin, existing_admin_orm)
             return AdminMapper.to_entity(existing_admin_orm)
         else:

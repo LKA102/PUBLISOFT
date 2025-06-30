@@ -120,7 +120,8 @@ class User(BaseEntity):
         user_create_event = UserCreatedEvent(
             user_id=user.id,
             name=extra_data.get('name'),
-            last_name=extra_data.get('last_name')
+            last_name=extra_data.get('last_name'),
+            role=user.role
         )
         user.events.add(user_create_event)
 

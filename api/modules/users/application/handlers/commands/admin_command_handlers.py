@@ -1,4 +1,4 @@
-from api.modules.users.domain.entities import admin
+from modules.users.domain.entities import admin
 from modules.users.domain.commands.admin_commands import *
 from modules.users.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
 from modules.users.domain.entities.admin import Admin
@@ -33,7 +33,7 @@ class AdminCommandHandler:
                 password=command.password
             )
 
-            uok.admin_repository.save(admin)
+            uok.admin_repository.update(admin)
             uok.commit()
             return admin
 

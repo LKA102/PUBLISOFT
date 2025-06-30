@@ -25,14 +25,17 @@ def update_admin(admin_id: UUID, request_data: UpdateAdminRequest, uok: SqlAlche
     try:
         command = UpdateAdminCommand(id=admin_id, **request_data.model_dump())
         message_bus.handle(command, uok=uok)
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=e.status_code,
             content={"detail": e.detail}
         )
     except Exception as e:
-        traceback.print_exc()
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Internal Server Error"}
@@ -43,14 +46,17 @@ def delete_admin(admin_id: UUID, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of
     try:
         command = DisableAdminCommand(id=admin_id)
         message_bus.handle(command, uok=uok)
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=e.status_code,
             content={"detail": e.detail}
         )
     except Exception as e:
-        traceback.print_exc()
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Internal Server Error"}
@@ -61,14 +67,17 @@ def delete_student(student_id: UUID, uok: SqlAlchemyUnitOfWork = Depends(get_uni
     try:
         command = DisableStudentAccountCommand(id=student_id)
         message_bus.handle(command, uok=uok)
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=e.status_code,
             content={"detail": e.detail}
         )
     except Exception as e:
-        traceback.print_exc()
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Internal Server Error"}

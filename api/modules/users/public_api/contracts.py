@@ -9,10 +9,10 @@ class UsersPublicAPI:
         self.__uow = SqlAlchemyUnitOfWork(session_factory=SessionLocal)
         self.__message_bus = MessageBus()
 
-    def create_admin(self, name, last_name, email, password):
-        command = CreateAdminCommand(name=name, last_name=last_name, email=email, password=password)
+    def create_admin(self, id, name, last_name):
+        command = CreateAdminCommand(id=id, name=name, last_name=last_name)
         return self.__message_bus.handle(command, uok=self.__uow)
 
-    def create_student(self, name, last_name, email, password):
-        command = CreateStudentCommand(name=name, last_name=last_name, email=email, password=password)
+    def create_student(self, id, name, last_name):
+        command = CreateStudentCommand(id=id, name=name, last_name=last_name)
         return self.__message_bus.handle(command, uok=self.__uow)

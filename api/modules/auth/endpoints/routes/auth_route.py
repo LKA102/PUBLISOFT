@@ -39,6 +39,7 @@ def register_user(
     except APIHTTPException as e:
         # Manejo de excepciones personalizadas
         print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=e.status_code,
             content={"detail": e.detail}
@@ -46,6 +47,7 @@ def register_user(
     except Exception as e:
         # Manejo de excepciones genéricas
         print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "An unexpected error occurred"}

@@ -23,9 +23,10 @@ from modules.users.application.handlers.events.admin_event_handlers import Admin
 
 class MessageBus(AbstractMessageBus):
     def handle(self, message, uok: AbstractUnitOfWork):
-        self.__messages_queue = [message]
-        while self.__messages_queue:
-            current_message = self.__messages_queue.pop(0)
+        self._results = []
+        self._messages_queue.append(message)
+        while self._messages_queue:
+            current_message = self._messages_queue.pop(0)
             if isinstance(current_message, Command):
                 cmd_result = self._handle_command(current_message, uok)
                 self._results.append(cmd_result)
@@ -46,9 +47,9 @@ MessageBus.register_command_handler(DisableAdminCommand, AdminCommandHandler.han
 MessageBus.register_command_handler(DisableStudentAccountCommand, AdminCommandHandler.handle_disable_student_account_command)
 
 # Events registration
-MessageBus.register_event_handler(StudentUpdatedEvent, StudentEventHandler.handle_student_updated_event)
-MessageBus.register_event_handler(StudentDisabledEvent, StudentEventHandler.handle_student_disabled_event)
+MessageBus.register_event_handler(StudentUpdatedEvent, [StudentEventHandler.handle_student_updated_event])
+MessageBus.register_event_handler(StudentDisabledEvent, [StudentEventHandler.handle_student_disabled_event])
 
-MessageBus.register_event_handler(AdminUpdatedEvent, AdminEventHandler.handle_admin_updated_event)
-MessageBus.register_event_handler(AdminDisabledEvent, AdminEventHandler.handle_admin_disabled_event)
-MessageBus.register_event_handler(DisableStudentAccountEvent, AdminEventHandler.handle_disable_student_account_event)
+MessageBus.register_event_handler(AdminUpdatedEvent, [AdminEventHandler.handle_admin_updated_event])
+MessageBus.register_event_handler(AdminDisabledEvent, [AdminEventHandler.handle_admin_disabled_event])
+MessageBus.register_event_handler(DisableStudentAccountEvent, [AdminEventHandler.handle_disable_student_account_event])
