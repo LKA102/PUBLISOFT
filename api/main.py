@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from modules.auth.endpoints.routes import auth_route
-from modules.users.endpoints.routers import user_router
+# from modules.users.endpoints.routers import user_router
+from modules.notifications.endpoints.routes import notification_route
 from common.session import engine, Base
 
 app = FastAPI()
@@ -20,4 +21,5 @@ app.add_middleware(
 
 
 app.include_router(auth_route.router, prefix="/auth", tags=["auth"])
-app.include_router(user_router.router, prefix="/users", tags=["users"])
+#app.include_router(user_router.router, prefix="/users", tags=["users"])
+app.include_router(notification_route.router, prefix="/notifications", tags=["notifications"])
