@@ -65,9 +65,15 @@ class UserCommandHandler:
                 raise ValueError("User not found")
 
             if command.email:
+                print(f"Updating email for user {user.id} to {command.email}")
                 user.email = EmailVO(command.email)
             if command.password:
+                print(f"Updating password for user {user.id}")
                 user.hash_password = PasswordHashVO.generate_hash_password(command.password)
+
+            if command.email or command.password:
+                user._update()
+            
 
             uok.user_repository.update(user)
             uok.commit()

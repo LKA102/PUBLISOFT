@@ -26,16 +26,25 @@ class UserRepositorySQLAlchemy(IUserRepository):
         return {UserMapper.to_entity(user_orm) for user_orm in users_orm}
     
     def _update(self, user: User) -> Optional[User]:
-        user_orm = UserMapper.to_orm(user, self.session)
-        existing_user_orm = self.session.query(UserSQLAlchemy).filter_by(id=user.id).first()
-        if existing_user_orm:
-            existing_user_orm.email = user_orm.email
-            existing_user_orm.hash_password = user_orm.hash_password
-            existing_user_orm.state = user_orm.state
-            existing_user_orm.user_code = user_orm.user_code
-            existing_user_orm.role = user_orm.role
-            UserSQLAlchemy.base_entity_to_orm(user, existing_user_orm)
-            return UserMapper.to_entity(existing_user_orm) # Maybe find a better way to return the updated entity
+        # Actualizar directamente en la base de datos usando session.query().update()
+        update_data = {
+            "email": user.email.value,  # Usar el valor primitivo del VO
+            "hash_password": user.hash_password.value,  # Usar el valor primitivo del VO
+            "state": user.state.value,  # Enum -> valor primitivo
+            "user_code": user.user_code.value,  # Usar el valor primitivo del VO
+            "role_id": self.session.query(RoleSQLAlchemy).filter_by(name=user.role.value).first().id if user.role else None
+        }
+
+        # Realizar la actualización
+        rows_updated = self.session.query(UserSQLAlchemy).filter_by(id=user.id).update(update_data)
+
+        # Confirmar los cambios
+        self.session.commit()
+
+        # Si se actualizó al menos una fila, retornar la entidad actualizada
+        if rows_updated:
+            updated_user_orm = self.session.query(UserSQLAlchemy).filter_by(id=user.id).first()
+            return UserMapper.to_entity(updated_user_orm)
         else:
             return None
         
