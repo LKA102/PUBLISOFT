@@ -115,5 +115,33 @@ export const usePostStore = defineStore('post', {
         this.loading = false;
       }
     },
+
+    async benchmarkPostsLoad() {
+      const batchSizes = [100, 500, 1000, 2000, 3000, 4000, 5000];
+      const metrics = [];
+
+      for (const size of batchSizes) {
+        const start = performance.now();
+
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .limit(size);
+
+        const end = performance.now();
+
+        if (error) {
+          console.error(`❌ Error al cargar ${size} registros:`, error.message);
+        } else {
+          const elapsed = (end - start) / 1000;
+          console.log(`✅ ${size} registros cargados en ${elapsed.toFixed(2)} segundos`);
+          metrics.push({ size, time: elapsed });
+        }
+      }
+
+      console.table(metrics);
+      // Opcional: exportarlos o graficarlos más adelante
+      return metrics;
+    },
   }
 });
