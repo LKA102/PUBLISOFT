@@ -1,0 +1,108 @@
+from fastapi import APIRouter, Depends, Response, HTTPException, status
+from fastapi.responses import JSONResponse
+from modules.users.endpoints.schemas.requests import UpdateStudentRequest
+from modules.users.application.views.student_view import StudentView
+#from app.modules.auth.endpoints.schemas.responses import Something
+from modules.users.endpoints.dependencies import get_message_bus, get_unit_of_work
+from modules.users.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
+from modules.users.application.message_bus import MessageBus
+from modules.users.domain.commands.student_commands import UpdateStudentCommand, DisableStudentCommand
+from common.exceptions import APIHTTPException
+from uuid import UUID
+import traceback
+
+router = APIRouter()
+
+@router.get("")
+def get_students(uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
+    try:
+        with uok:
+            student_view = StudentView(uok.session)
+            students = student_view.get_all_students()
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=students
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+
+@router.get("/{student_id}")
+def get_student(student_id: UUID, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
+    try:
+        with uok:
+            student_view = StudentView(uok.session)
+            student = student_view.get_student_by_id(student_id)
+            if not student:
+                raise APIHTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=student
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+
+@router.put("/{student_id}")
+def update_student(student_id: UUID, request_data: UpdateStudentRequest, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work), message_bus: MessageBus = Depends(get_message_bus)):
+    try:
+        command = UpdateStudentCommand(id=student_id, **request_data.model_dump())
+        message_bus.handle(command, uok=uok)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+
+@router.delete("/{student_id}")
+def delete_student(student_id: UUID, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work), message_bus: MessageBus = Depends(get_message_bus)):
+    try:
+        command = DisableStudentCommand(id=student_id)
+        message_bus.handle(command, uok=uok)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
