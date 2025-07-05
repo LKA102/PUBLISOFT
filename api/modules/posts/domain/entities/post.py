@@ -1,7 +1,7 @@
 from modules.posts.domain.entities.base_entity import BaseEntity
 from modules.posts.domain.value_objects.vo import CategoryVO, ScoreVO
 from modules.posts.domain.events.post_events import ScorePostEvent
-from modules.posts.domain.events.post_events import PostCreatedEvent
+#from modules.posts.domain.events.post_events import PostCreatedEvent
 
 from typing import List
 import enum

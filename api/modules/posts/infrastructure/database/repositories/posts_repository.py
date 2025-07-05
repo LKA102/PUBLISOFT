@@ -1,4 +1,4 @@
-from api.modules.posts.domain.repositories.interface_posts_repository import (
+from modules.posts.domain.repositories.interface_posts_repository import (
     IPostRepository,
 )
 from modules.posts.domain.entities.post import Post
