@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, HTTPException, status
 from fastapi.responses import JSONResponse
-from api.modules.notifications.application.views.notifications_view import NotificationsView
+from modules.notifications.application.views.notifications_view import NotificationsView
 from modules.notifications.endpoints.dependencies import get_message_bus, get_unit_of_work
 from modules.notifications.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
 from modules.notifications.application.message_bus import MessageBus
@@ -16,17 +16,103 @@ router = APIRouter()
 # Traer notificaciones no leidas
 # Traer notificaciones leidas
 
-
-@router.get("/")
-def get_all_notifications(
-    response: Response
-):
+# Endpoints
+@router.get("")
+def get_all_notifications(uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
     try:
-        session = SessionLocal()
-        notifications_view = NotificationsView(session)
-        result = notifications_view.get_all_notifications()
-        session.close()
-        return JSONResponse(content=result)
+        with uok:
+            notifications_view = NotificationsView(uok.session)
+            notifications = notifications_view.get_all_notifications()
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=notifications
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
     except Exception as e:
-        traceback.print_exc()
-        raise APIHTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+    
+@router.get("/user/{user_id}")
+def get_user_notifications(user_id: str, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
+    try:
+        with uok:
+            notifications_view = NotificationsView(uok.session)
+            notifications = notifications_view.get_user_notifications(user_id)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=notifications
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+    
+@router.get("/unread/{user_id}")
+def get_unread_notifications(user_id: str, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
+    try:
+        with uok:
+            notifications_view = NotificationsView(uok.session)
+            notifications = notifications_view.get_unread_notifications(user_id)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=notifications
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+    
+@router.get("/read/{user_id}")
+def get_read_notifications(user_id: str, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
+    try:
+        with uok:
+            notifications_view = NotificationsView(uok.session)
+            notifications = notifications_view.get_read_notifications(user_id)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=notifications
+            )
+    except APIHTTPException as e:
+        print(f"APIHTTPException: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )

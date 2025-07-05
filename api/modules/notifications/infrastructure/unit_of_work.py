@@ -20,7 +20,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def rollback(self):
         self.session.rollback()
         
-    #def collect_events(self):
+    def collect_events(self):
         #for user in self.user_repository.seen:
             #while user.events:
                 #yield user.events.pop()
+        pass
