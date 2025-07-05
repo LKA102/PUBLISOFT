@@ -1,4 +1,4 @@
-require('dotenv').config(); // Lee .env en raíz del proyecto
+require('dotenv').config();
 const { Client } = require('pg');
 const fs = require('fs');
 
@@ -10,7 +10,7 @@ const config = {
   port: process.env.DB_PORT || 5432
 };
 
-async function benchmarkPostsLoadLocal() {
+async function benchmarkLocalPostgres() {
   const client = new Client(config);
   const batchSizes = [100, 500, 1000, 2000, 3000, 4000, 5000];
   const metrics = [];
@@ -21,28 +21,34 @@ async function benchmarkPostsLoadLocal() {
 
     for (const size of batchSizes) {
       const start = performance.now();
-
-      const result = await client.query(`SELECT * FROM posts LIMIT ${size}`);
-
+      const res = await client.query(`SELECT * FROM posts LIMIT $1`, [size]);
       const end = performance.now();
-      const elapsed = (end - start) / 1000;
 
-      console.log(`✅ ${size} registros cargados en ${elapsed.toFixed(2)} s`);
+      const time = (end - start) / 1000; // en segundos
+      const dataSizeBytes = Buffer.byteLength(JSON.stringify(res.rows));
+      const dataSizeMB = dataSizeBytes / (1024 * 1024);
+      const speedMBps = dataSizeMB / time;
 
-      metrics.push({ size, time: elapsed });
+      console.log(`✅ ${size} registros cargados en ${time.toFixed(3)} s (${dataSizeMB.toFixed(2)} MB)`);
+
+      metrics.push({
+        size,
+        time: Number(time.toFixed(5)),
+        dataSizeMB: Number(dataSizeMB.toFixed(5)),
+        speedMBps: Number(speedMBps.toFixed(5))
+      });
     }
 
     console.table(metrics);
 
-    // Guardar resultados si deseas graficar luego
-    fs.writeFileSync('./benchmark/local-results.json', JSON.stringify(metrics, null, 2));
+    // Guardar resultados
+    fs.writeFileSync('benchmark/local-results.json', JSON.stringify(metrics, null, 2));
     console.log('📊 Resultados guardados en benchmark/local-results.json');
-
   } catch (err) {
-    console.error('❌ Error al medir:', err);
+    console.error('❌ Error durante el benchmark:', err);
   } finally {
     await client.end();
   }
 }
 
-benchmarkPostsLoadLocal();
+benchmarkLocalPostgres(); // <<== ¡Esto faltaba al final!
