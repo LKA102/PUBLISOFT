@@ -85,6 +85,6 @@ class UserCommandHandler:
             if not user:
                 raise ValueError("User not found")
 
-            user.state = UserStateEnum.DISABLED
+            user.state = UserStateEnum.DELETED
             uok.user_repository.update(user)
             uok.commit()

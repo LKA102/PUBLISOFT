@@ -51,10 +51,10 @@ class AdminCommandHandler:
     @staticmethod
     def handle_disable_student_account_command(command: DisableStudentAccountCommand, uok: SqlAlchemyUnitOfWork):
         with uok:
-            student = uok.student_repository.load(command.student_id)
-            if not student:
-                raise ValueError("Student not found")
+            admin = uok.admin_repository.load(command.admin_id)
+            if not admin:
+                raise ValueError("Admin not found")
 
             admin.disable_student_account(command.student_id)
             uok.commit()
-            return student.id
+            return command.student_id

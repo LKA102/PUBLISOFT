@@ -40,7 +40,7 @@ class StudentCommandHandler:
             
             
             # Persist changes
-            uok.student_repository.save(student)
+            uok.student_repository.update(student)
             uok.commit()
 
             return student

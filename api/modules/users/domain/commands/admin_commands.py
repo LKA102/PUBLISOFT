@@ -22,5 +22,6 @@ class DisableAdminCommand(Command):
         self.id = id
         
 class DisableStudentAccountCommand(Command):
-    def __init__(self, student_id: UUID):
+    def __init__(self, admin_id: UUID, student_id: UUID):
+        self.admin_id = admin_id
         self.student_id = student_id
