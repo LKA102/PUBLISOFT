@@ -159,6 +159,9 @@ const isPdf = (fileType) => {
 onMounted(async () => {
   await authStore.fetchUserProfile(authStore.user?.id); 
   await postStore.fetchPosts(currentPage.value, itemsPerPage);
+
+  const benchmark = await postStore.benchmarkGreenFetch(currentPage.value, itemsPerPage);
+  console.log('📊 Benchmark automático al cargar:', benchmark);
 });
 
 // Limpia el event listener al desmontar el componente

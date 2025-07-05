@@ -121,7 +121,50 @@ export const usePostStore = defineStore('post', {
       } finally {
         this.loading = false;
       }
+    },
+
+    async benchmarkGreenFetch(page = 1, limit = 5) {
+      const authStore = useAuthStore();
+      const currentUserId = authStore.user?.id || null;
+
+      const offset = (page - 1) * limit;
+
+      try {
+        const start = performance.now();
+
+        const { data, error } = await supabase
+          .rpc('get_posts_with_ratings_paginated', {
+            p_user_id: currentUserId,
+            p_limit: limit,
+            p_offset: offset
+          });
+
+        const end = performance.now();
+
+        if (error) throw error;
+
+        const elapsed = (end - start) / 1000;
+        const sizeBytes = JSON.stringify(data.posts).length;
+        const sizeMB = sizeBytes / (1024 * 1024);
+        const speed = sizeMB / elapsed;
+
+        const metrics = {
+          page,
+          limit,
+          timeSeconds: Number(elapsed.toFixed(5)),
+          dataSizeMB: Number(sizeMB.toFixed(5)),
+          speedMBps: Number(speed.toFixed(5))
+        };
+
+        console.log('📈 Benchmark (modo green):', metrics);
+        return metrics;
+
+      } catch (err) {
+        console.error('❌ Error en benchmark green:', err.message);
+        return null;
+      }
     }
+
 
   }
 });
