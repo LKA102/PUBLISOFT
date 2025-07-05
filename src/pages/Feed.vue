@@ -40,13 +40,13 @@
       <div v-for="post in postStore.posts" :key="post.id" class="post-item">
         <div class="post-header">
           <img
-            :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
+            :src="post.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
             alt="Avatar del autor"
             class="post-avatar"
           />
           <div class="post-info">
             <span class="post-author">
-              {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
+              {{ post.alias || post.email || 'Usuario Desconocido' }}
             </span>
             <span class="post-date">
               {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
