@@ -22,7 +22,18 @@ onMounted(async () => {
 })
 
 async function deletePost(id) {
-  await supabase.from('posts').delete().eq('id', id)
-  myPosts.value = myPosts.value.filter(p => p.id !== id)
+  const confirmDelete = confirm('¿Estás seguro de que deseas eliminar esta publicación?');
+  if (!confirmDelete) return;
+
+  const { error } = await supabase.from('posts').delete().eq('id', id);
+
+  if (error) {
+    alert('Error al eliminar: ' + error.message);
+    console.error('Error al eliminar:', error);
+    return;
+  }
+
+  // Si no hay error, eliminamos de la lista local
+  myPosts.value = myPosts.value.filter(p => p.id !== id);
 }
 </script>
