@@ -1,8 +1,8 @@
 // src/stores/rating.js
 import { defineStore } from 'pinia';
 import { supabase } from '@/services/supabase'; // Asegúrate de que esta ruta sea correcta
-import { useAuthStore } from './auth'; // Para obtener el user_id
-import { usePostStore } from './post'; // Para refrescar los posts después de calificar
+import { useAuthStore } from '@modules/auth/stores/auth';// Para obtener el user_id
+import { usePostStore } from '@modules/posts/stores/post'; // Para refrescar los posts después de calificar
 
 export const useRatingStore = defineStore('rating', {
   state: () => ({

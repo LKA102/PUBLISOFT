@@ -4,7 +4,7 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router'; // Si usas Vue Router
 import { supabase } from '@/services/supabase'; // Tu archivo de configuración de Supabase
-import { useAuthStore } from '@/stores/auth'; // Tu store de autenticación
+import { useAuthStore } from '@/modules/auth/stores/auth'; // Tu store de autenticación
 // Asegúrate de que tu CSS de Tailwind se importa en algún lugar
 import './assets/tailwind.css'; // La ruta correcta si el archivo está en src/assets/
 

@@ -144,8 +144,8 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { usePostStore } from '@/stores/post';
+import { useAuthStore } from '@modules/auth/stores/auth';
+import { usePostStore } from '@modules/posts/stores/post';
 import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
 
 // --- Stores ---

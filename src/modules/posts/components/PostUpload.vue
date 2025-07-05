@@ -51,7 +51,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { usePostStore } from '@/stores/post';
+import { usePostStore } from '@modules/posts/stores/post';
 import { storeToRefs } from 'pinia';
 
 const postStore = usePostStore();

@@ -99,8 +99,8 @@
 
 <script setup>
 import { onMounted, ref, onUnmounted } from 'vue'; // Importa ref y onUnmounted
-import { useRankingStore } from '@/stores/ranking';
-import { useAuthStore } from '@/stores/auth'; // Importa el store de autenticación
+import { useRankingStore } from '@modules/ranking/stores/ranking';
+import { useAuthStore } from '@modules/auth/stores/auth'; // Importa el store de autenticación
 import { useRouter } from 'vue-router'; // Importa el router
 
 const rankingStore = useRankingStore();

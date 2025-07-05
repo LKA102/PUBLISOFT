@@ -30,8 +30,8 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useRatingStore } from '@/stores/rating';
+import { useAuthStore } from '@modules/auth/stores/auth';
+import { useRatingStore } from '@modules/ranking/stores/rating';
 
 const props = defineProps({
   postId: {

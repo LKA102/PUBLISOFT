@@ -85,12 +85,12 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'; // Importa 'ref'
-import { usePostStore } from '@/stores/post';
-import { useAuthStore } from '@/stores/auth';
+import { usePostStore } from '@modules/posts/stores/post';
+import { useAuthStore } from '@modules/auth/stores/auth';
 import { useRouter } from 'vue-router';
 
-import PostUpload from '@/components/PostUpload.vue';
-import RatingStars from '@/components/RatingStars.vue';
+import PostUpload from '@modules/posts/components/PostUpload.vue'
+import RatingStars from '@modules/ranking/components/RatingStars.vue'
 
 const postStore = usePostStore();
 const authStore = useAuthStore();

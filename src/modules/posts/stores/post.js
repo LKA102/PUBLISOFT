@@ -1,7 +1,7 @@
 // src/stores/post.js
 import { defineStore } from 'pinia';
 import { supabase } from '@/services/supabase';
-import { useAuthStore } from './auth'; // Necesitamos el usuario actual
+import { useAuthStore } from '@modules/auth/stores/auth'; // Necesitamos el usuario actual
 
 export const usePostStore = defineStore('post', {
   state: () => ({

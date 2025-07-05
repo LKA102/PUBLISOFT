@@ -41,7 +41,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '@modules/auth/stores/auth';
 import { storeToRefs } from 'pinia'; // Importa storeToRefs para acceder a propiedades reactivas del store
 
 const email = ref('');
