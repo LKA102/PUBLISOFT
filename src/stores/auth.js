@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', {
      * @param {string} password
      * @param {'student' | 'admin'} [role='student'] Rol del usuario a registrar
      */
-    async register(email, code, password, role = 'student') {
+    async register(email, code, password, alias, role = 'student') {
       this.loading = true;
       this.error = null;
       try {
@@ -106,7 +106,7 @@ export const useAuthStore = defineStore('auth', {
                 email: this.user.email,
                 role: role,
                 alias: alias, // Guardar el alias proporcionado
-                avatar_url: defaultAvatarUrl, 
+                //avatar_url: defaultAvatarUrl, 
                 // Puedes añadir 'alias' aquí si lo tienes en el formulario de registro
               },
             ])
