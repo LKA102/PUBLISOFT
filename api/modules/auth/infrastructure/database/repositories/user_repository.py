@@ -2,6 +2,7 @@ from typing import Set, Optional
 from modules.auth.domain.entities.user import User
 from modules.auth.domain.repositories.interface_user_repository import IUserRepository
 from modules.auth.infrastructure.database.models.users import UserSQLAlchemy
+from modules.auth.infrastructure.database.models.roles import RoleSQLAlchemy
 from modules.auth.infrastructure.database.mappers.user_mapper import UserMapper
 from uuid import UUID
 
@@ -28,10 +29,10 @@ class UserRepositorySQLAlchemy(IUserRepository):
     def _update(self, user: User) -> Optional[User]:
         # Actualizar directamente en la base de datos usando session.query().update()
         update_data = {
-            "email": user.email.value,  # Usar el valor primitivo del VO
-            "hash_password": user.hash_password.value,  # Usar el valor primitivo del VO
-            "state": user.state.value,  # Enum -> valor primitivo
-            "user_code": user.user_code.value,  # Usar el valor primitivo del VO
+            "email": str(user.email),  # Usar el valor primitivo del VO
+            "hash_password": str(user.hash_password),  # Usar el valor primitivo del VO
+            "state": user.state,  # Enum -> valor primitivo
+            "user_code": str(user.user_code),  # Usar el valor primitivo del VO
             "role_id": self.session.query(RoleSQLAlchemy).filter_by(name=user.role.value).first().id if user.role else None
         }
 
