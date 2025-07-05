@@ -80,6 +80,22 @@
 
       </div>
     </div>
+
+    <div class="pagination-bar" v-if="totalPages > 1">
+      <button 
+        v-for="page in totalPages" 
+        :key="page" 
+        :class="{ 'active-page': page === currentPage }" 
+        @click="changePage(page)"
+      >
+        {{ page }}
+      </button>
+    </div>
+
+    <p class="page-status">
+      Mostrando {{ postStore.posts.length }} de {{ postStore.total }} publicaciones
+    </p>
+
   </div>
 </template>
 
@@ -88,6 +104,8 @@ import { onMounted, ref } from 'vue'; // Importa 'ref'
 import { usePostStore } from '@/stores/post';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
+import { computed } from 'vue';
+
 
 import PostUpload from '@/components/PostUpload.vue';
 import RatingStars from '@/components/RatingStars.vue';
@@ -95,6 +113,18 @@ import RatingStars from '@/components/RatingStars.vue';
 const postStore = usePostStore();
 const authStore = useAuthStore();
 const router = useRouter();
+
+const currentPage = ref(1);
+const itemsPerPage = 5;
+
+const totalPages = computed(() => {
+  return Math.ceil(postStore.total / itemsPerPage);
+});
+
+const changePage = async (page) => {
+  currentPage.value = page;
+  await postStore.fetchPosts(page, itemsPerPage);
+};
 
 const dropdownOpen = ref(false); // Estado para controlar la visibilidad del desplegable
 
@@ -128,9 +158,7 @@ const isPdf = (fileType) => {
 
 onMounted(async () => {
   await authStore.fetchUserProfile(authStore.user?.id); 
-  await postStore.fetchPosts();
-  // Agrega el event listener al montar el componente
-  document.addEventListener('click', handleClickOutside);
+  await postStore.fetchPosts(currentPage.value, itemsPerPage);
 });
 
 // Limpia el event listener al desmontar el componente
@@ -415,4 +443,27 @@ onUnmounted(() => {
   margin-right: 8px;
   font-size: 1.1em;
 }
+
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 8px;
+}
+
+.pagination-bar button {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.pagination-bar button.active-page {
+  background-color: #1877f2;
+  color: white;
+  font-weight: bold;
+  border-color: #1877f2;
+}
+
 </style>

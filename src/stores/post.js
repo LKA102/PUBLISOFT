@@ -8,6 +8,7 @@ export const usePostStore = defineStore('post', {
     posts: [],
     loading: false,
     error: null,
+    total: 0, // Nuevo: total de publicaciones
   }),
 
   actions: {
@@ -93,27 +94,34 @@ export const usePostStore = defineStore('post', {
       }
     },
 
-    async fetchPosts() {
+    async fetchPosts(page = 1, limit = 5) {
       this.loading = true;
       this.error = null;
       const authStore = useAuthStore();
-      const currentUserId = authStore.user?.id || null; // Obtener el ID del usuario actual
+      const currentUserId = authStore.user?.id || null;
+
+      const offset = (page - 1) * limit;
 
       try {
-        // Llama a la función RPC para obtener posts con ratings
-        const { data, error } = await supabase.rpc('get_posts_with_ratings', { p_user_id: currentUserId });
+        const { data, error } = await supabase
+          .rpc('get_posts_with_ratings_paginated', {
+            p_user_id: currentUserId,
+            p_limit: limit,
+            p_offset: offset
+          });
 
-        if (error) {
-          throw error;
-        }
-        this.posts = data; // Los datos ya vienen formateados de la función
-        console.log('Publicaciones cargadas (con ratings):', this.posts);
+        if (error) throw error;
+
+        this.posts = data.posts;
+        this.total = data.total;
+        console.log(`Cargadas ${this.posts.length} de ${this.total} publicaciones`);
       } catch (err) {
         this.error = err.message;
         console.error('Error al cargar publicaciones:', err.message);
       } finally {
         this.loading = false;
       }
-    },
+    }
+
   }
 });
