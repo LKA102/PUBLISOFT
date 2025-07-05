@@ -55,7 +55,7 @@ const { loading, error } = storeToRefs(authStore); // Accede a loading y error d
 const handleRegister = async () => {
   // Asegúrate de que los parámetros coincidan con la acción 'register' en tu store
   // Enviamos email, code, password, y AHORA también alias
-  await authStore.register(email.value, code.value, password.value, alias.value);
+  await authStore.register(email.value, code.value, alias.value, password.value);
 };
 </script>
 
