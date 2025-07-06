@@ -98,7 +98,7 @@ export const usePostStore = defineStore('post', {
       this.error = null;
 
       const authStore = useAuthStore();
-      const currentUserId = authStore.user?.id;
+      
 
       try {
         const { data, error } = await supabase
@@ -112,7 +112,7 @@ export const usePostStore = defineStore('post', {
               avatar_url
             )
           `)
-          .eq('user_id', currentUserId)
+      
           .order('created_at', { ascending: false });
 
         if (error) throw error;
