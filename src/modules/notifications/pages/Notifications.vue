@@ -1,7 +1,7 @@
 <template>
   <div class="notifications-page">
    
-    <h1>Todas tus Notificaciones</h1>
+    <h2>Todas tus Notificaciones</h2>
       <button v-if="notificationStore.notifications.length > 0 && notificationStore.unreadNotificationsCount > 0" @click="markAllAsRead" class="mark-read-button-page">
         Marcar todas como leídas
       </button>

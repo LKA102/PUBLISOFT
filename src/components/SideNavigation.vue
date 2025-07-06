@@ -34,7 +34,6 @@ const route = useRoute();
 
 const navItems = [
   { path: '/feed', label: 'Inicio', icon: 'fas fa-home' },
-  { path: '/profile', label: 'Perfil', icon: 'fas fa-user' },
   { path: '/notifications', label: 'Notificaciones', icon: 'fas fa-bell' },
   { path: '/ranking', label: 'Ranking', icon: 'fas fa-trophy' },
   { path: '/resources', label: 'Recursos académicos', icon: 'fas fa-book' }

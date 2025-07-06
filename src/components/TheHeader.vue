@@ -68,9 +68,6 @@
           <router-link to="/profile" class="dropdown-item">
             <i class="fas fa-user-circle dropdown-icon"></i> Mi Perfil
           </router-link>
-          <router-link to="/ranking" class="dropdown-item">
-            <i class="fas fa-trophy dropdown-icon"></i> Ranking
-          </router-link>
           <button @click="handleLogout" :disabled="authStore.loading" class="dropdown-item logout-button-in-menu">
             <i class="fas fa-sign-out-alt dropdown-icon"></i> Cerrar Sesión
           </button>
