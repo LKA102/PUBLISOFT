@@ -62,6 +62,13 @@ const routes = [
     name: 'UserProfile',
     component: () => import('@/modules/users/pages/UserProfileView.vue'),
     meta: { requiresAuth: true }
+  },
+  // NUEVA RUTA PARA EL DASHBOARD DE ADMINISTRADOR
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('@/modules/admi/pages/Dashboard.vue'),
+    meta: { requiresAuth: true } // Requiere autenticación Y rol de admin
   }
 ]
 

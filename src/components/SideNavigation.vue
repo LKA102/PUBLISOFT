@@ -19,6 +19,11 @@
             <span class="nav-text">{{ item.label }}</span>
           </router-link>
         </li>
+        <li v-if="authStore.isAdmin">
+        <router-link to="/dashboard" active-class="active-link">
+          <i class="fas fa-tools"></i> <span>Panel Admin</span>
+        </router-link>
+      </li>
       </ul>
     </nav>
   </aside>
