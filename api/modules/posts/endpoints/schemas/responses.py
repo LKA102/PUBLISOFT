@@ -8,6 +8,7 @@ class PostResponse(BaseModel):
     id: UUID
     title: str
     file_url: str
+    original_filename: str
     category: str
     type: str
     score_avg: float

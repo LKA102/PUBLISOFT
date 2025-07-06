@@ -22,6 +22,7 @@ class Post(BaseEntity):
         super().__init__(**kwargs)
         self.__title = kwargs.get("title")
         self.__file_url = kwargs.get("file_url")
+        self.__original_filename = kwargs.get("original_filename")
         self.__category: CategoryVO = kwargs.get("category")
         self.__type: PostTypeEnum = kwargs.get("type")
         self.__scores: List[ScoreVO] = kwargs.get("scores")
@@ -44,6 +45,10 @@ class Post(BaseEntity):
     @property
     def file_url(self) -> str:
         return self.__file_url
+
+    @property
+    def original_filename(self) -> str:
+        return self.__original_filename
 
     @property
     def category(self) -> CategoryVO:
@@ -72,6 +77,12 @@ class Post(BaseEntity):
         if not isinstance(value, str) or len(value) == 0:
             raise ValueError("File URL must be a non-empty string")
         self.__file_url = value
+
+    @original_filename.setter
+    def original_filename(self, value: str):
+        if not isinstance(value, str) or len(value) == 0:
+            raise ValueError("Original filename must be a non-empty string")
+        self.__original_filename = value
 
     @category.setter
     def category(self, value: CategoryVO):
@@ -102,6 +113,7 @@ class Post(BaseEntity):
         cls,
         title: str,
         file_url: str,
+        original_filename: str,
         category: CategoryVO,
         post_type: PostTypeEnum,
     ) -> "Post":
@@ -109,13 +121,14 @@ class Post(BaseEntity):
         if not title or len(title) == 0:
             raise ValueError("Title must be a non-empty string")
 
-        post_id = UUID(int=0)
+        post_id = UUID(int=0)  # Placeholder ID
         created_at = updated_at = datetime.now(timezone.utc)
 
         post = cls(
             id=post_id,
             title=title,
             file_url=file_url,
+            original_filename=original_filename,
             category=category,
             type=post_type,
             scores=[],
@@ -125,10 +138,10 @@ class Post(BaseEntity):
         )
 
         post_created_event = PostCreatedEvent(
-            post_id=post.id,
+            post_id=post.id if post.id else None,
             title=post.title,
-            category=post.category,
-            type=post.type,
+            category=str(post.category),
+            type=post.type.value,
         )
         post.events.add(post_created_event)
 

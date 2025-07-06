@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class ScoreVO:
     This class encapsulates the score and ensures its validity.
     """
 
+    student_id: UUID
     score: int
 
     def __str__(self):

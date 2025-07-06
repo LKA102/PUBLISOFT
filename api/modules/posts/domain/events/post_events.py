@@ -10,7 +10,13 @@ class ScorePostEvent(Event):
 
 
 class PostCreatedEvent(Event):
-    def __init__(self, post_id: UUID, title: str, category: str, type: str):
+    def __init__(
+        self,
+        post_id: UUID = None,
+        title: str = None,
+        category: str = None,
+        type: str = None,
+    ):
         self.post_id = post_id
         self.title = title
         self.category = category

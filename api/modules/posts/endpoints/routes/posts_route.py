@@ -3,6 +3,7 @@ from modules.posts.endpoints.dependencies import get_unit_of_work
 from modules.posts.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
 from modules.posts.application.message_bus import MessageBus
 from modules.posts.endpoints.schemas.requests import PostCreate
+from modules.posts.endpoints.schemas.requests import PostCreateForm
 from modules.posts.endpoints.schemas.requests import PostUpdate
 from modules.posts.endpoints.schemas.requests import PostScore
 from modules.posts.endpoints.schemas.responses import CreatePostResponse
@@ -14,13 +15,15 @@ from modules.posts.domain.commands.post_commands import CreatePostCommand
 from modules.posts.domain.commands.post_commands import UpdatePostCommand
 from modules.posts.domain.commands.post_commands import DeletePostCommand
 from modules.posts.domain.commands.post_commands import ScorePostCommand
-from modules.posts.domain.entities.post import Post
+from modules.posts.domain.entities.post import Post, PostTypeEnum
+from modules.posts.domain.value_objects.vo import CategoryVO
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile, Form
 from fastapi.responses import JSONResponse
 
 from common.exceptions import APIHTTPException
 import traceback
+from uuid import UUID
 
 
 router = APIRouter()
@@ -28,7 +31,7 @@ router = APIRouter()
 
 @router.get("/posts")
 def get_posts(uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
-    posts = uok.post_repository.load_all()
+    posts = uok.posts_repository.load_all()
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=posts,
@@ -40,7 +43,7 @@ def get_post(
     post_id: str, uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)
 ):
     try:
-        post = uok.post_repository.load(post_id)
+        post = uok.posts_repository.load(UUID(post_id))
         if not post:
             raise APIHTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -61,52 +64,51 @@ def get_post(
             content={"detail": "An unexpected error occurred"},
         )
 
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content=PostResponse(
-            id=post.id,
-            title=post.title,
-            file_url=post.file_url,
-            category=post.category,
-            type=post.type,
-            score_avg=post.score_avg,
-            created_at=post.created_at,
-            updated_at=post.updated_at,
-        ),
+    return PostResponse(
+        id=post.id,
+        title=post.title,
+        file_url=post.file_url,
+        original_filename=post.original_filename,
+        category=str(post.category),
+        type=post.type.value,
+        score_avg=post.score_avg,
+        created_at=post.created_at,
+        updated_at=post.updated_at,
     )
 
 
-@router.post("/create")
+@router.post("/create", status_code=status.HTTP_201_CREATED)
 def create_post(
-    post: PostCreate,
+    title: str = Form(...),
+    category: str = Form(...),
+    post_type: str = Form(...),
+    upload_file: UploadFile = None,
     uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work),
     message_bus: MessageBus = Depends(get_message_bus),
 ):
     try:
         command = CreatePostCommand(
-            title=post.title,
-            file=post.file,
-            category=post.category,
-            type=post.type,
+            title=title,
+            file=upload_file,
+            category=CategoryVO(name=category),
+            type=PostTypeEnum(post_type),
         )
 
         results = message_bus.handle(command, uok)
         created_post: Post = results[0]
 
-        return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
-            content=CreatePostResponse(
-                message="Post created successfully",
-                post=PostResponse(
-                    id=created_post.id,
-                    title=created_post.title,
-                    file_url=created_post.file_url,
-                    category=created_post.category,
-                    type=created_post.type,
-                    score_avg=created_post.score_avg,
-                    created_at=created_post.created_at,
-                    updated_at=created_post.updated_at,
-                ),
+        return CreatePostResponse(
+            message="Post created successfully",
+            post=PostResponse(
+                id=created_post.id,
+                title=created_post.title,
+                file_url=created_post.file_url,
+                original_filename=created_post.original_filename,
+                category=str(created_post.category),
+                type=created_post.type.value,
+                score_avg=created_post.score_avg,
+                created_at=created_post.created_at,
+                updated_at=created_post.updated_at,
             ),
         )
     except APIHTTPException as e:
@@ -133,30 +135,28 @@ def update_post(
 ):
     try:
         command = UpdatePostCommand(
-            post_id=post.post_id,
+            post_id=UUID(post.post_id),
             title=post.title,
             file_url=post.file_url,
-            category=post.category,
-            type=post.type,
+            category=CategoryVO(name=post.category),
+            type=PostTypeEnum(post.type),
         )
 
         results = message_bus.handle(command, uok)
         updated_post: Post = results[0]
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=UpdatePostResponse(
-                message="Post updated successfully",
-                post=PostResponse(
-                    id=updated_post.id,
-                    title=updated_post.title,
-                    file_url=updated_post.file_url,
-                    category=updated_post.category,
-                    type=updated_post.type,
-                    score_avg=updated_post.score_avg,
-                    created_at=updated_post.created_at,
-                    updated_at=updated_post.updated_at,
-                ),
+        return UpdatePostResponse(
+            message="Post updated successfully",
+            post=PostResponse(
+                id=updated_post.id,
+                title=updated_post.title,
+                file_url=updated_post.file_url,
+                original_filename=updated_post.original_filename,
+                category=str(updated_post.category),
+                type=updated_post.type.value,
+                score_avg=updated_post.score_avg,
+                created_at=updated_post.created_at,
+                updated_at=updated_post.updated_at,
             ),
         )
     except APIHTTPException as e:
@@ -182,13 +182,10 @@ def delete_post(
     message_bus: MessageBus = Depends(get_message_bus),
 ):
     try:
-        command = DeletePostCommand(post_id=post_id)
+        command = DeletePostCommand(post_id=UUID(post_id))
         message_bus.handle(command, uok)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=DeletePostResponse(
-                message="Post deleted successfully",
-            ),
+        return DeletePostResponse(
+            message="Post deleted successfully",
         )
     except APIHTTPException as e:
         print(f"APIHTTPException: {e}")
@@ -214,18 +211,15 @@ def score_post(
 ):
     try:
         command = ScorePostCommand(
-            post_id=score.post_id,
-            student_id=score.student_id,
+            post_id=UUID(score.post_id),
+            student_id=UUID(score.student_id),
             score=score.score,
         )
 
         message_bus.handle(command, uok)
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=ScorePostResponse(
-                message="Post scored successfully",
-            ),
+        return ScorePostResponse(
+            message="Post scored successfully",
         )
     except APIHTTPException as e:
         print(f"APIHTTPException: {e}")

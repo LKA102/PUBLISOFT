@@ -14,6 +14,7 @@ class PostSQLAlchemy(Base, BaseEntitySQLAlchemy):
 
     title = Column(String, nullable=False)
     file_url = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)
     category = Column(String, nullable=False)
     type = Column(String, nullable=False)
     scores = Column(JSONB, nullable=False, default=list)
