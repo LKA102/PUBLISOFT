@@ -2,9 +2,9 @@
   <div class="profile-page">
     <TheHeader
       :showBackButton="true"
-      backRoute="/feed"
-    />
+      backRoute="/feed"/>
 
+    <!-- Sección de Perfil -->
     <section class="profile-details">
       <h2>Información del Perfil</h2>
       <div class="avatar-section">
@@ -46,55 +46,72 @@
     </section>
 
     <section class="my-posts-section">
-  <h2>Mis Publicaciones</h2>
-  <p v-if="postStore.loading" class="status-message">Cargando mis publicaciones...</p>
-  <p v-else-if="postStore.error" class="error-message">Error al cargar mis publicaciones: {{ postStore.error }}</p>
-  <p v-else-if="myPosts.length === 0" class="status-message">Aún no tienes publicaciones.</p>
-  <div v-else class="post-list">
-    <div v-for="post in myPosts" :key="post.id" class="post-item">
-      <div class="post-header">
-        <img :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'" alt="Avatar" class="post-avatar">
-        <div class="post-info">
-          <span class="post-author">
-            {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
-          </span>
-          <span class="post-date">
-            {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
-          </span>
+      <h2>Mis Publicaciones</h2>
+      <p v-if="postStore.loading" class="status-message">Cargando mis publicaciones...</p>
+      <p v-else-if="postStore.error" class="error-message">Error al cargar mis publicaciones: {{ postStore.error }}</p>
+      <p v-else-if="myPosts.length === 0" class="status-message">Aún no tienes publicaciones.</p>
+      
+      <div v-else class="post-list">
+        <div v-for="post in myPosts" :key="post.id" class="post-item">
+          <div class="post-header">
+            <img :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'" alt="Avatar" class="post-avatar">
+            <div class="post-info">
+              <span class="post-author">
+                {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
+              </span>
+              <span class="post-date">
+                {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
+              </span>
+            </div>
+            <div class="post-actions" v-if="authStore.user?.id === post.user_id">
+              <button @click="editPost(post.id)" class="action-button edit-button" title="Editar Publicación"><i class="fas fa-edit"></i></button>
+              <button @click="confirmDeletePost(post.id)" class="action-button delete-button" title="Eliminar Publicación"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          <h4 class="post-title"><strong>{{ post.title }}</strong></h4>
+          <p class="post-detail"><strong>Curso:</strong> {{ post.course }}</p>
+          <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
+
+        <div v-if="editingPost?.id === post.id" class="edit-post-inline">
+            <label>Título:</label>
+            <input v-model="editedTitle" class="profile-input" />
+
+            <label>Curso:</label>
+            <input v-model="editedCourse" class="profile-input" />
+
+            <label>Ciclo:</label>
+            <input v-model="editedCycle" class="profile-input" />
+
+            <div class="edit-buttons">
+              <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
+              <button @click="cancelEdit" class="delete-student-button">Cancelar</button>
+            </div>
+          </div>
+
+          <div v-if="post.average_rating !== undefined" class="post-rating">
+            <strong>Estrellas:</strong>
+            <span class="rating-value">
+              {{ post.average_rating ? post.average_rating.toFixed(1) : 'Sin calificación' }}
+            </span>
+            <span v-if="post.average_rating" class="star-icon">⭐</span>
+          </div>
+
+          <div v-if="post.file_url" class="post-file-preview-container">
+            <template v-if="isImage(post.file_type)">
+              <img :src="post.file_url" :alt="post.title" class="file-preview-image" />
+            </template>
+            <template v-else-if="isPdf(post.file_type)">
+              <iframe :src="post.file_url" width="100%" height="400px" class="file-preview-pdf" frameborder="0"></iframe>
+            </template>
+            <template v-else>
+              <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link">
+                <i class="fas fa-file-alt"></i> Ver Archivo ({{ post.file_type ? post.file_type.toUpperCase() : 'Archivo' }})
+              </a>
+            </template>
+          </div>
+
         </div>
-        <div class="post-actions" v-if="authStore.user?.id === post.user_id">
-          <button @click="editPost(post.id)" class="action-button edit-button" title="Editar Publicación"><i class="fas fa-edit"></i></button>
-          <button @click="confirmDeletePost(post.id)" class="action-button delete-button" title="Eliminar Publicación"><i class="fas fa-trash"></i></button>
-        </div>
       </div>
-      <h4 class="post-title"><strong>{{ post.title }}</strong></h4>
-      <p class="post-detail"><strong>Curso:</strong> {{ post.course }}</p>
-      <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
-
-      <div v-if="post.average_rating !== undefined" class="post-rating">
-        <strong>Estrellas:</strong>
-        <span class="rating-value">
-          {{ post.average_rating ? post.average_rating.toFixed(1) : 'Sin calificación' }}
-        </span>
-        <span v-if="post.average_rating" class="star-icon">⭐</span>
-      </div>
-
-      <div v-if="post.file_url" class="post-file-preview-container">
-        <template v-if="isImage(post.file_type)">
-          <img :src="post.file_url" :alt="post.title" class="file-preview-image" />
-        </template>
-        <template v-else-if="isPdf(post.file_type)">
-          <iframe :src="post.file_url" width="100%" height="400px" class="file-preview-pdf" frameborder="0"></iframe>
-        </template>
-        <template v-else>
-          <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link">
-            <i class="fas fa-file-alt"></i> Ver Archivo ({{ post.file_type ? post.file_type.toUpperCase() : 'Archivo' }})
-          </a>
-        </template>
-      </div>
-
-    </div>
-  </div>
 </section>
 
     <section v-if="authStore.user?.role === 'admin'" class="admin-section">
@@ -349,17 +366,19 @@ const isPdf = (fileType) => {
 };
 
 // --- Acciones de Posts (Editar/Eliminar propias publicaciones) ---
-const editPost = (postId) => {
+function editPost(postId) {
   const post = myPosts.value.find(p => p.id === postId);
-  if (!post) return;
+  if (post) {
+    editingPost.value = { ...post };
+    editedTitle.value = post.title;
+    editedCourse.value = post.course;
+    editedCycle.value = post.cycle;
+  }
+}
 
-  editingPost.value = post;
-  editedTitle.value = post.title;
-  editedCourse.value = post.course;
-  editedCycle.value = post.cycle;
-  showEditModal.value = true;
-
-};
+function cancelEdit() {
+  editingPost.value = null;
+}
 
 const saveEditedPost = async () => {
   if (!editingPost.value) return;

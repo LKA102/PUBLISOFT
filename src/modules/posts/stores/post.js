@@ -8,9 +8,6 @@ export const usePostStore = defineStore('post', {
     posts: [],
     loading: false,
     error: null,
-    allCoursesByCycleData: [],
-    courses: [], // Nuevo estado para almacenar cursos únicos
-    cycles: [],  // Nuevo estado para almacenar ciclos únicos
   }),
 
   actions: {
@@ -96,115 +93,37 @@ export const usePostStore = defineStore('post', {
       }
     },
 
-    async fetchPosts(filters = {}) {
+   async fetchPosts() {
       this.loading = true;
       this.error = null;
-      // Obtener el ID del usuario actual para saber su calificación
+
       const authStore = useAuthStore();
       const currentUserId = authStore.user?.id;
 
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('posts')
           .select(`
             *,
-            users (alias, email, avatar_url, role),
-            ratings (rating, user_id)
-          `);
-
-        // Aplicar filtro de búsqueda por texto
-        if (filters.searchTerm) {
-          const searchTerm = `%${filters.searchTerm.toLowerCase()}%`;
-          query = query.or(`title.ilike.${searchTerm},course.ilike.${searchTerm},cycle.ilike.${searchTerm}`);
-        }
-
-        // Aplicar filtro por curso
-        if (filters.course) {
-          query = query.eq('course', filters.course);
-        }
-
-        // Aplicar filtro por ciclo
-        if (filters.cycle) {
-          query = query.eq('cycle', filters.cycle);
-        }
-
-        query = query.order('created_at', { ascending: false });
-
-        const { data, error } = await query;
+            users (
+              id,
+              email,
+              alias,
+              avatar_url
+            )
+          `)
+          .eq('user_id', currentUserId)
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        this.posts = data.map(post => {
-          // Calcular el promedio de ratings para cada post
-          const totalRating = post.ratings.reduce((sum, r) => sum + r.rating, 0);
-          const averageRating = post.ratings.length > 0 ? totalRating / post.ratings.length : 0;
-
-          // Encontrar la calificación del usuario actual para este post
-          // Busca en `post.ratings` si hay una calificación de `currentUserId`
-          const currentUserRating = post.ratings.find(
-            rating => rating.user_id === currentUserId
-          );
-          
-          return {
-            ...post,
-            average_rating: averageRating,
-            user_rating: currentUserRating ? currentUserRating.rating : 0 // ¡AQUÍ ESTÁ LA CORRECCIÓN!
-          };
-        });
-
+        this.posts = data;
+        console.log('📥 Publicaciones cargadas sin RPC:', this.posts);
       } catch (err) {
         this.error = err.message;
-        console.error('Error fetching posts:', err.message);
+        console.error('❌ Error al cargar publicaciones sin RPC:', err.message);
       } finally {
         this.loading = false;
-      }
-    },
-
-    async fetchAllCoursesByCycleData() {
-      try {
-        const { data, error } = await supabase
-          .from('courses_by_cycle')
-          .select('course_name, cycle_name'); // Seleccionamos ambas columnas
-
-        if (error) throw error;
-        this.allCoursesByCycleData = data || [];
-
-        // Opcional: También poblar uniqueCourses y uniqueCycles si aún se necesitan listas completas
-        const uniqueCoursesSet = new Set(data.map(item => item.course_name).filter(Boolean));
-        const uniqueCyclesSet = new Set(data.map(item => item.cycle_name).filter(Boolean));
-        this.courses = Array.from(uniqueCoursesSet).sort();
-        this.cycles = Array.from(uniqueCyclesSet).sort();
-
-      } catch (err) {
-        console.error('Error fetching all courses by cycle data:', err.message);
-        this.error = 'Error al cargar datos de cursos y ciclos.';
-      }
-    },
-
-
-    async fetchUniqueCourses() {
-      try {
-        // Obtener valores distintos de la columna 'course_name' de la tabla 'courses_by_cycle'
-        const { data, error } = await supabase
-          .from('courses_by_cycle')
-          .select('course_name', { distinct: true });
-
-        if (error) throw error;
-        // Mapea los resultados para obtener solo un array de strings y ordena
-        this.courses = data.map(item => item.course_name).filter(Boolean).sort();
-      } catch (err) {
-        console.error('Error fetching unique courses from courses_by_cycle:', err.message);
-        this.error = 'Error al cargar los cursos.';
-      }
-    },
-
-    async fetchUniqueCycles() {
-      try {
-        // Forzar ciclos únicos del 1 al 10
-        this.cycles = Array.from({ length: 10 }, (_, i) => `CICLO ${i + 1}`);
-      } catch (err) {
-        console.error('Error setting fixed cycles:', err.message);
-        this.error = 'Error al cargar los ciclos.';
       }
     },
 
