@@ -5,9 +5,9 @@ from datetime import timezone
 
 class BaseEntity:
     def __init__(self, **kwargs):
-        self.id = kwargs.get("id")
-        self.created_at = kwargs.get("created_at")
-        self.updated_at = kwargs.get("updated_at")
+        self.__id = kwargs.get("id")
+        self.__created_at = kwargs.get("created_at")
+        self.__updated_at = kwargs.get("updated_at")
 
     @property
     def id(self) -> UUID:
