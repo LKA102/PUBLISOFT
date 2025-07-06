@@ -2,7 +2,11 @@
   <header class="app-header">
     <!-- Logo PUBLISOFT a la izquierda -->
     <router-link to="/feed" class="logo-link">
-      <h1 class="logo">PUBLISOFT</h1>
+      <img 
+        src="@/assets/logo.png" 
+        alt="Logo PUBLISOFT" 
+        class="logo"
+      />
     </router-link>
 
     <!-- Botón de volver (condicional) -->
@@ -135,7 +139,7 @@ const handleClickOutside = (event) => {
 
 const handleLogout = async () => {
   await authStore.signOut();
-  router.push('/auth');
+  router.push('/login');
 };
 
 onMounted(() => {

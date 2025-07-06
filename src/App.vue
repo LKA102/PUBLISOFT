@@ -1,27 +1,23 @@
 <template>
   <div class="app-container">
-    <TheHeader />
-    <SideNavigation />
-    <main class="main-content">
+    <TheHeader v-if="authStore.isAuthenticated" />
+    <SideNavigation v-if="authStore.isAuthenticated" />
+    <main class="main-content" :class="{ 'full-width': !authStore.isAuthenticated }">
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
-import TheHeader from '@/components/TheHeader.vue';
-import SideNavigation from '@/components/SideNavigation.vue';
+import { useAuthStore } from '@/modules/auth/stores/auth'
+import TheHeader from '@/components/TheHeader.vue'
+import SideNavigation from '@/components/SideNavigation.vue'
+
+const authStore = useAuthStore()
 </script>
 
 <style>
-/* Añade estos estilos globales */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f5f7fa;
-  color: #333;
-}
-
+/* Tus estilos existentes */
 .app-container {
   display: flex;
   min-height: 100vh;
@@ -29,19 +25,24 @@ body {
 
 .main-content {
   flex-grow: 1;
-  margin-left: 250px; /* Igual al ancho del side navigation */
+  margin-left: 250px;
   padding: 20px;
-  padding-top: 80px; /* Altura del navbar + espacio */
+  padding-top: 80px;
+}
+
+.main-content.full-width {
+  margin-left: 0;
+  padding-top: 20px;
 }
 
 @media (max-width: 992px) {
-  .main-content {
+  .main-content:not(.full-width) {
     margin-left: 70px;
   }
 }
 
 @media (max-width: 768px) {
-  .main-content {
+  .main-content:not(.full-width) {
     margin-left: 0;
   }
 }

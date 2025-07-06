@@ -1,30 +1,100 @@
-
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/modules/home/pages/Home.vue'
-import Login from '@/modules/auth/pages/Login.vue'
-import Register from '@/modules/auth/pages/Register.vue'
-import Feed from '@/modules/users/pages/Feed.vue'
-import MyPublications from '@/modules/posts/pages/MyPublications.vue'
-import Profile from '@/modules/users/pages/Profile.vue'
-import NotificationsPage from '@/modules/notifications/pages/Notifications.vue';import Ranking from '@modules/ranking/pages/Ranking.vue'
-import UserProfileView from '@/modules/users/pages/UserProfileView.vue'
+import { useAuthStore } from '@/modules/auth/stores/auth'
 
 const routes = [
-  { path: '/', name: 'Home', component: Login },
-  { path: '/login', name: 'Login', component: Login },
-  { path: '/register', name: 'Register', component: Register },
-  { path: '/feed', name: 'Feed', component: Feed },
-  { path: '/myposts', name: 'MyPublications', component: MyPublications },
-  { path: '/profile', name: 'Profile', component: Profile },
-  { path: '/notifications', name: 'Notifications', component: NotificationsPage },
-  { path: '/ranking', name: 'Ranking', component: Ranking },
-  {path: '/users/:userId', name: 'UserProfile', component: UserProfileView}
-
+  { 
+    path: '/', 
+    name: 'Home', 
+    component: () => import('@/modules/auth/pages/Login.vue'),
+    meta: { public: true }
+  },
+  { 
+    path: '/login', 
+    name: 'Login', 
+    component: () => import('@/modules/auth/pages/Login.vue'),
+    meta: { public: true }
+  },
+  { 
+    path: '/register', 
+    name: 'Register', 
+    component: () => import('@/modules/auth/pages/Register.vue'),
+    meta: { public: true }
+  },
+  { 
+    path: '/feed', 
+    name: 'Feed', 
+    component: () => import('@/modules/users/pages/Feed.vue'),
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/myposts', 
+    name: 'MyPublications', 
+    component: () => import('@/modules/posts/pages/MyPublications.vue'),
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/profile', 
+    name: 'Profile', 
+    component: () => import('@/modules/users/pages/Profile.vue'),
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/notifications', 
+    name: 'Notifications', 
+    component: () => import('@/modules/notifications/pages/Notifications.vue'),
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/ranking', 
+    name: 'Ranking', 
+    component: () => import('@modules/ranking/pages/Ranking.vue'),
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/users/:userId', 
+    name: 'UserProfile', 
+    component: () => import('@/modules/users/pages/UserProfileView.vue'),
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// Guardia de navegación global
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Verificar autenticación solo si es necesario
+  if (to.meta.requiresAuth) {
+    if (!authStore.user) {
+      // Intentar recuperar sesión si no hay usuario en el store
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          authStore.setUser(user)
+        } else {
+          return next('/login?redirect=' + encodeURIComponent(to.fullPath))
+        }
+      } catch (error) {
+        console.error('Error verificando sesión:', error)
+        return next('/login?redirect=' + encodeURIComponent(to.fullPath))
+      }
+    }
+    
+    if (!authStore.isAuthenticated) {
+      return next('/login?redirect=' + encodeURIComponent(to.fullPath))
+    }
+  }
+  
+  // Redirigir usuarios autenticados que intentan acceder a rutas públicas
+  if (to.meta.public && authStore.isAuthenticated) {
+    return next('/feed')
+  }
+  
+  next()
 })
 
 export default router
