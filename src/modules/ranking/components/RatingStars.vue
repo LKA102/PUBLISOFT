@@ -18,9 +18,7 @@
         @mouseover="isAuthenticated && (hoverRating = star)"
         @mouseleave="isAuthenticated && (hoverRating = 0)"
       >
-        <template v-if="star <= (hoverRating || internalUserRating)">&#xe838;</template>
-        <template v-else>&#xe838;</template>
-      </span>
+        <template v-if="star <= (hoverRating || internalUserRating)">&#xe838;</template> <template v-else>&#xe83a;</template> </span>
       <span v-if="!isAuthenticated" class="rating-login-prompt">
         Inicia sesión para calificar
       </span>
@@ -61,37 +59,48 @@ const emitRating = async (rating) => {
 
   const newRatingValue = internalUserRating.value === rating ? 0 : rating;
   
-  // Optimistic UI update (se asume que tendrá éxito)
+  // Optimistic UI update
   const oldUserRating = internalUserRating.value;
   internalUserRating.value = newRatingValue;
 
   const { success } = await ratingStore.submitRating(props.postId, newRatingValue);
 
   if (!success) {
-    // Si hubo un error, revertir la UI
+    // If there was an error, revert the UI
     internalUserRating.value = oldUserRating;
     console.error('Error al calificar: La calificación no se pudo guardar.');
-    // Podrías añadir un `alert` o un toast aquí
+    // You could add an `alert` or a toast here
   }
-  // No necesitamos actualizar `averageRating.value` aquí directamente
-  // porque `ratingStore.submitRating` ya llama a `postStore.fetchPosts()`
-  // lo que hará que el `Feed.vue` se actualice y pase los nuevos props a este componente.
+  // The `postStore.fetchPosts()` call in `submitRating` will cause the parent
+  // `Feed.vue` to re-render, passing down the new `initialUserRating` and `initialAverageRating`
+  // props, which will be picked up by the `watch` below.
 };
 
 const checkAuthAndSetInitialRatings = () => {
   isAuthenticated.value = !!authStore.user;
-  // Estos valores se reciben del postStore, que ya los trae de la función RPC
+  // These values are received from the postStore, which already fetches them
+  // from the RPC function.
   averageRating.value = props.initialAverageRating;
   internalUserRating.value = props.initialUserRating;
 };
 
 onMounted(checkAuthAndSetInitialRatings);
-watch([() => authStore.user, () => props.initialAverageRating, () => props.initialUserRating], checkAuthAndSetInitialRatings);
 
+// Watch for changes in authStore.user, initialAverageRating, and initialUserRating props
+// This ensures the component reacts to updates from the parent after `fetchPosts` runs.
+watch(
+  [() => authStore.user, () => props.initialAverageRating, () => props.initialUserRating],
+  ([newUser, newAverageRating, newUserRating]) => {
+    isAuthenticated.value = !!newUser;
+    averageRating.value = newAverageRating;
+    internalUserRating.value = newUserRating;
+  },
+  { immediate: true } // Run the watcher immediately on component mount
+);
 </script>
 
 <style scoped>
-/* Asegúrate de que esta URL esté accesible o de incluir Material Symbols globalmente */
+/* Make sure this URL is accessible or include Material Symbols globally */
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 .rating-container {
@@ -133,21 +142,21 @@ watch([() => authStore.user, () => props.initialAverageRating, () => props.initi
   cursor: default;
 
   font-variation-settings:
-    'FILL' 0,
+    'FILL' 0, /* Default for unfilled stars */
     'wght' 400,
     'GRAD' 0,
     'opsz' 24;
-  color: #ccc;
+  color: #ccc; /* Default color for unfilled stars */
   transition: color 0.2s ease, font-variation-settings 0.2s ease;
 }
 
 .star-icon.filled {
   font-variation-settings:
-    'FILL' 1,
+    'FILL' 1, /* Filled state */
     'wght' 500,
     'GRAD' 0,
     'opsz' 24;
-  color: #ffc107;
+  color: #ffc107; /* Color for filled stars */
 }
 
 .star-icon.interactive {
@@ -158,6 +167,16 @@ watch([() => authStore.user, () => props.initialAverageRating, () => props.initi
   transform: scale(1.1);
 }
 
+/* Hover effect for interactive stars */
+.user-rating-stars .star-icon.interactive:hover,
+.user-rating-stars .star-icon.interactive:hover ~ .star-icon.interactive {
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 500;
+  color: #ffc107;
+}
+
+/* Reset hover effect for stars *after* the one being hovered */
 .user-rating-stars .star-icon.interactive:hover ~ .star-icon.interactive {
   font-variation-settings:
     'FILL' 0,
@@ -165,13 +184,6 @@ watch([() => authStore.user, () => props.initialAverageRating, () => props.initi
   color: #ccc;
 }
 
-.user-rating-stars .star-icon.interactive:hover,
-.user-rating-stars .star-icon.interactive:hover + .star-icon.interactive {
-  font-variation-settings:
-    'FILL' 1,
-    'wght' 500;
-  color: #ffc107;
-}
 
 .rating-login-prompt {
   font-size: 0.85em;

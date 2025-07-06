@@ -1,40 +1,9 @@
 <template>
   <div class="ranking-page">
-    <header class="feed-header">
-      <h2 class="header-title">PUBLISOFT</h2>
-      <div class="header-actions">
-        <router-link to="/feed" class="header-button feed-button">
-          <i class="fas fa-home header-icon"></i>
-          <span>Inicio</span>
-        </router-link>
-        <div v-if="authStore.user" class="dropdown-container" @click="toggleDropdown">
-          <button class="profile-dropdown-toggle">
-            <img
-              :src="authStore.user?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
-              alt="Avatar del usuario"
-              class="profile-avatar"
-            />
-            <span class="profile-alias">
-              {{ authStore.user?.alias || 'Mi Perfil' }}
-            </span>
-            <i class="fas fa-caret-down dropdown-arrow" :class="{ 'rotate-180': dropdownOpen }"></i>
-          </button>
-
-          <div v-if="dropdownOpen" class="dropdown-menu">
-            <router-link to="/profile" class="dropdown-item">
-              <i class="fas fa-user-circle dropdown-icon"></i> Mi Perfil
-            </router-link>
-            <router-link to="/ranking" class="dropdown-item">
-              <i class="fas fa-trophy dropdown-icon"></i> Ranking
-            </router-link>
-            <button @click="handleLogout" :disabled="authStore.loading" class="dropdown-item logout-button-in-menu">
-              <i class="fas fa-sign-out-alt dropdown-icon"></i> Cerrar Sesión
-            </button>
-          </div>
-        </div>
-        
-        </div>
-    </header>
+   <TheHeader
+      :showBackButton="true"
+      backRoute="/feed"
+    />
 
     <p v-if="rankingStore.loading" class="status-message">Cargando ranking...</p>
     <p v-else-if="rankingStore.error" class="error-message">Error: {{ rankingStore.error }}</p>
@@ -102,6 +71,7 @@ import { onMounted, ref, onUnmounted } from 'vue'; // Importa ref y onUnmounted
 import { useRankingStore } from '@modules/ranking/stores/ranking';
 import { useAuthStore } from '@modules/auth/stores/auth'; // Importa el store de autenticación
 import { useRouter } from 'vue-router'; // Importa el router
+import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
 
 const rankingStore = useRankingStore();
 const authStore = useAuthStore(); // Instancia el store de autenticación

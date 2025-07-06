@@ -1,38 +1,9 @@
 <template>
   <div class="profile-page">
-    <header class="profile-header">
-      <router-link to="/feed" class="back-to-feed">
-        <i class="fas fa-arrow-left"></i> Volver al Feed
-      </router-link>
-      <h1>Mi Perfil</h1>
-      <div class="notification-area">
-        <button @click="toggleNotifications" class="notification-icon">
-          <i class="fas fa-bell"></i>
-          <span v-if="unreadNotificationsCount > 0" class="notification-badge">
-            {{ unreadNotificationsCount }}
-          </span>
-        </button>
-        <div v-if="showNotifications" class="notifications-dropdown">
-          <p v-if="notificationStore.loading">Cargando notificaciones...</p>
-          <p v-else-if="notificationStore.error" class="error-message">{{ notificationStore.error }}</p>
-          <ul v-else-if="notificationStore.notifications.length > 0">
-            <li v-for="notif in notificationStore.notifications" :key="notif.id" :class="{ 'unread': !notif.read }">
-              {{ notif.message }}
-              <br>
-              <small>{{ new Date(notif.created_at).toLocaleString('es-ES') }}</small>
-            </li>
-          </ul>
-          <p v-else class="status-message">No hay notificaciones.</p>
-          <router-link to="/notifications" class="view-all-notifications-button">
-            Ver todas las notificaciones ({{ notificationStore.notifications.length }} mostradas)
-          </router-link>
-
-          <button v-if="notificationStore.notifications.length > 0 && unreadNotificationsCount > 0" @click="markAllAsRead" class="mark-read-button">
-            Marcar todas como leídas
-          </button>
-        </div>
-      </div>
-    </header>
+    <TheHeader
+      :showBackButton="true"
+      backRoute="/feed"
+    />
 
     <section class="profile-details">
       <h2>Información del Perfil</h2>
@@ -152,6 +123,7 @@ import { useAuthStore } from '@modules/auth/stores/auth';
 import { usePostStore } from '@modules/posts/stores/post';
 import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
 import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
+import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
 
 // --- Stores ---
 const authStore = useAuthStore();

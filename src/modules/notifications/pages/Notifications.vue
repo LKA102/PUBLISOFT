@@ -1,15 +1,14 @@
 <template>
   <div class="notifications-page">
-    <header class="page-header">
-      <router-link to="/feed" class="back-to-feed">
-        <i class="fas fa-arrow-left"></i> Volver al Feed
-      </router-link>
-      <h1>Todas tus Notificaciones</h1>
+   
+    <TheHeader
+      :showBackButton="true"
+      backRoute="/feed"
+    />
+    <h1>Todas tus Notificaciones</h1>
       <button v-if="notificationStore.notifications.length > 0 && notificationStore.unreadNotificationsCount > 0" @click="markAllAsRead" class="mark-read-button-page">
         Marcar todas como leídas
       </button>
-    </header>
-
     <div class="notification-list-container">
       <p v-if="notificationStore.loading" class="status-message">Cargando notificaciones...</p>
       <p v-else-if="notificationStore.error" class="error-message">{{ notificationStore.error }}</p>
@@ -40,6 +39,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'; // <--- Aña
 import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
 import { useAuthStore } from '@modules/auth/stores/auth'; // Necesario para obtener el user_id
 import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
+import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
 
 const notificationStore = useNotificationStore();
 const authStore = useAuthStore();

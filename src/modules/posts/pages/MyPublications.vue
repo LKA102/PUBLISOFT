@@ -12,6 +12,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '@/services/supabase'
+import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
 
 const myPosts = ref([])
 

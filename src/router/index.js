@@ -7,6 +7,7 @@ import Feed from '@/modules/users/pages/Feed.vue'
 import MyPublications from '@/modules/posts/pages/MyPublications.vue'
 import Profile from '@/modules/users/pages/Profile.vue'
 import NotificationsPage from '@/modules/notifications/pages/Notifications.vue';import Ranking from '@modules/ranking/pages/Ranking.vue'
+import UserProfileView from '@/modules/users/pages/UserProfileView.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Login },
@@ -15,8 +16,10 @@ const routes = [
   { path: '/feed', name: 'Feed', component: Feed },
   { path: '/myposts', name: 'MyPublications', component: MyPublications },
   { path: '/profile', name: 'Profile', component: Profile },
-{ path: '/notifications', name: 'Notifications', component: NotificationsPage },
-  { path: '/ranking', name: 'Ranking', component: Ranking }
+  { path: '/notifications', name: 'Notifications', component: NotificationsPage },
+  { path: '/ranking', name: 'Ranking', component: Ranking },
+  {path: '/users/:userId', name: 'UserProfile', component: UserProfileView}
+
 ]
 
 const router = createRouter({

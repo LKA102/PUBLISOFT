@@ -1,78 +1,53 @@
 <template>
   <div class="feed-page">
-    <header class="feed-header">
-      <h2 class="header-title">PUBLISOFT</h2>
-
-      <div class="header-actions">
-        <div class="notification-area">
-          <button @click="toggleNotifications" class="notification-icon">
-            <i class="fas fa-bell"></i>
-            <span v-if="notificationStore.unreadNotificationsCount > 0" class="notification-badge">
-              {{ notificationStore.unreadNotificationsCount }}
-            </span>
-          </button>
-          <div v-if="showNotifications" class="notifications-dropdown">
-            <p v-if="notificationStore.loading" class="status-message">Cargando notificaciones...</p>
-            <p v-else-if="notificationStore.error" class="error-message">{{ notificationStore.error }}</p>
-            <ul v-else-if="notificationStore.notifications.length > 0">
-              <li v-for="notif in notificationStore.notifications" :key="notif.id" :class="{ 'unread': !notif.read }">
-                {{ notif.message }}
-                <br>
-                <small>{{ new Date(notif.created_at).toLocaleString('es-ES') }}</small>
-              </li>
-            </ul>
-            <p v-else class="status-message">No hay notificaciones.</p>
-
-            <router-link to="/notifications" class="view-all-notifications-button">
-              Ver todas las notificaciones ({{ notificationStore.notifications.length }} mostradas)
-            </router-link>
-
-            <button v-if="notificationStore.notifications.length > 0 && notificationStore.unreadNotificationsCount > 0"
-                    @click="markAllAsRead" class="mark-read-button">
-              Marcar todas como leídas
-            </button>
-          </div>
-        </div>
-        <div v-if="authStore.user" class="dropdown-container" @click="toggleDropdown">
-          <button class="profile-dropdown-toggle">
-            <img
-              :src="authStore.user?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
-              alt="Avatar del usuario"
-              class="profile-avatar"
-            />
-            <span class="profile-alias">
-              {{ authStore.user?.alias || 'Mi Perfil' }}
-            </span>
-            <i class="fas fa-caret-down dropdown-arrow" :class="{ 'rotate-180': dropdownOpen }"></i>
-          </button>
-
-          <div v-if="dropdownOpen" class="dropdown-menu">
-            <router-link to="/profile" class="dropdown-item">
-              <i class="fas fa-user-circle dropdown-icon"></i> Mi Perfil
-            </router-link>
-            <router-link to="/ranking" class="dropdown-item">
-              <i class="fas fa-trophy dropdown-icon"></i> Ranking
-            </router-link>
-            <button @click="handleLogout" :disabled="authStore.loading" class="dropdown-item logout-button-in-menu">
-              <i class="fas fa-sign-out-alt dropdown-icon"></i> Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
+    <TheHeader/>
     <PostUpload />
+    <div class="filters-container">
+      <div class="search-bar">
+        <input
+          type="text"
+          v-model="searchTerm"
+          placeholder="Buscar por título, curso o ciclo..."
+          @keyup.enter="applyFilters"
+        />
+        <button @click="applyFilters" class="search-button">
+          <i class="fas fa-search"></i> Buscar
+        </button>
+        <button v-if="searchTerm || selectedCourse || selectedCycle" @click="clearFilters" class="clear-filters-button">
+          Limpiar Filtros
+        </button>
+      </div>
+
+      <div class="filter-dropdowns">
+        <select v-model="selectedCycle" @change="applyFilters" class="filter-select">
+          <option value="">Todos los Ciclos</option>
+          <option v-for="cycle in postStore.cycles" :key="cycle" :value="cycle">
+            {{ cycle }}
+          </option>
+        </select>
+
+        <select v-model="selectedCourse" @change="applyFilters" class="filter-select">
+          <option value="">Todos los Cursos</option>
+          <option v-for="course in postStore.courses" :key="course" :value="course">
+            {{ course }}
+          </option>
+        </select>
+      </div>
+    </div>
+
     <p v-if="postStore.loading" class="status-message">Cargando publicaciones...</p>
     <p v-else-if="postStore.error" class="error-message">Error al cargar publicaciones: {{ postStore.error }}</p>
     <p v-else-if="postStore.posts.length === 0" class="status-message">No hay publicaciones disponibles.</p>
     <div v-else class="post-list">
       <div v-for="post in postStore.posts" :key="post.id" class="post-item">
         <div class="post-header">
+          <router-link :to="`/users/${post.user_id}`" class="post-author-link">
           <img
             :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
             alt="Avatar del autor"
             class="post-avatar"
           />
+           </router-link>
           <div class="post-info">
             <span class="post-author">
               {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
@@ -101,7 +76,7 @@
           </template>
         </div>
 
-        <RatingStars
+         <RatingStars
           :post-id="post.id"
           :initial-average-rating="post.average_rating"
           :initial-user-rating="post.user_rating"
@@ -117,7 +92,7 @@ import { onMounted, ref } from 'vue'; // Importa 'ref'
 import { usePostStore } from '@modules/posts/stores/post';
 import { useAuthStore } from '@modules/auth/stores/auth';
 import { useRouter } from 'vue-router';
-
+import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
 import PostUpload from '@modules/posts/components/PostUpload.vue'
 import RatingStars from '@modules/ranking/components/RatingStars.vue'
 import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
@@ -126,6 +101,30 @@ const postStore = usePostStore();
 const authStore = useAuthStore();
 const router = useRouter();
 const notificationStore = useNotificationStore(); // INSTANCIAR EL STORE
+// Estados para la búsqueda y filtros
+const searchTerm = ref('');
+const selectedCourse = ref('');
+const selectedCycle = ref('');
+
+// Función para aplicar los filtros (llamará al store)
+const applyFilters = () => {
+  const filters = {
+    searchTerm: searchTerm.value,
+    course: selectedCourse.value,
+    cycle: selectedCycle.value,
+  };
+  postStore.fetchPosts(filters);
+};
+
+// Función para limpiar los filtros
+const clearFilters = () => {
+  searchTerm.value = '';
+  selectedCourse.value = '';
+  selectedCycle.value = '';
+  applyFilters(); // Vuelve a cargar todas las publicaciones
+};
+
+
 
 const dropdownOpen = ref(false); // Estado para controlar la visibilidad del desplegable
 // --- Estados Locales para Notificaciones ---
@@ -175,6 +174,19 @@ onMounted(async () => {
   }
 });
 
+onMounted(async () => {
+  if (authStore.user) {
+    // Cargar los cursos y ciclos únicos (independientemente)
+    await postStore.fetchUniqueCourses();
+    await postStore.fetchUniqueCycles();
+    
+    // Cargar publicaciones con los filtros iniciales (vacíos)
+    applyFilters();
+    
+   
+  }
+});
+
 onUnmounted(() => {
   // Asegúrate de desuscribirte de las notificaciones al salir del Feed
   notificationStore.unsubscribeRealtimeNotifications();
@@ -218,6 +230,162 @@ onUnmounted(() => {
   box-shadow: 0 0 10px rgba(0,0,0,0.05);
 }
 
+.filters-container {
+  background-color: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  display: flex;
+  /* Cambiado: Ahora los elementos internos se alinean en fila */
+  /* Usa 'row' para alinear horizontalmente */
+  flex-direction: row; 
+  /* Permite que los elementos salten a la siguiente línea si no hay espacio */
+  flex-wrap: wrap; 
+  /* Espacio entre los elementos flexibles */
+  gap: 15px; 
+  /* Alinea los elementos al inicio (izquierda por defecto) */
+  align-items: center; /* Alinea verticalmente los elementos en la fila */
+  justify-content: space-between; /* Distribuye el espacio entre la barra de búsqueda y los filtros */
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  /* Permite que la barra de búsqueda ocupe el espacio disponible */
+  flex-grow: 1; 
+  /* Asegura que no sea más pequeño de lo necesario en ciertos casos */
+  min-width: 250px; /* Ancho mínimo para la barra de búsqueda */
+}
+
+.search-bar input {
+  flex-grow: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1em;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.search-bar input:focus {
+  border-color: #1877f2;
+}
+
+.search-button, .clear-filters-button {
+  padding: 10px 15px;
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background-color 0.2s ease;
+  /* Asegura que los botones no se encojan demasiado */
+  flex-shrink: 0; 
+}
+
+.search-button:hover {
+  background-color: #155bb5;
+}
+
+.clear-filters-button {
+  background-color: #6c757d; /* Gris para limpiar filtros */
+}
+
+.clear-filters-button:hover {
+  background-color: #5a6268;
+}
+
+.filter-dropdowns {
+  display: flex;
+  gap: 10px;
+  /* Alinea los selectores al final (derecha) dentro de su contenedor */
+  justify-content: flex-end; 
+  /* Permite que los selectores ocupen el espacio restante o se envuelvan */
+  flex-wrap: wrap; 
+  /* Asegura que no se encojan demasiado y mantengan un ancho mínimo si es necesario */
+  min-width: 200px; /* Ancho mínimo para el conjunto de dropdowns */
+}
+
+.filter-select {
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1em;
+  background-color: white;
+  cursor: pointer;
+  outline: none;
+  appearance: none; /* Elimina estilos por defecto del sistema */
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13.2-6.4H18.4c-4.9%200-9.2%202.2-12.8%206.4-3.6%204.2-4.7%209.7-3.2%2014.5l133.7%20163.6c2.7%203.4%206.7%205.5%2011.2%205.5s8.5-2.1%2011.2-5.5L287%2083.9c1.5-4.8.4-10.3-3.2-14.5z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px top 50%;
+  background-size: 12px auto;
+  padding-right: 30px; /* Espacio para el icono de flecha */
+  /* Permite que los selectores se estiren o encojan de manera flexible */
+  flex-grow: 1; 
+  min-width: 120px; /* Ancho mínimo para cada selector individual */
+}
+
+.filter-select:hover {
+  border-color: #c0c0c0;
+}
+
+/* --- Media Queries para Responsividad --- */
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column; /* Vuelve a columna en pantallas pequeñas */
+    align-items: stretch; /* Estira los elementos para ocupar todo el ancho */
+  }
+
+  .search-bar {
+    width: 100%; /* La barra de búsqueda ocupa todo el ancho */
+    min-width: unset; /* Elimina el min-width fijo */
+  }
+
+  .filter-dropdowns {
+    width: 100%; /* Los dropdowns ocupan todo el ancho */
+    justify-content: space-between; /* Distribuye espacio entre ellos si hay varios */
+    min-width: unset; /* Elimina el min-width fijo */
+  }
+
+  .filter-select {
+    width: 100%; /* Cada selector ocupa todo el ancho disponible */
+    min-width: unset; /* Elimina el min-width fijo */
+  }
+}
+
+@media (max-width: 480px) {
+  .search-bar {
+    flex-direction: column; /* Botones de búsqueda y limpiar se apilan */
+    align-items: stretch;
+  }
+  .search-bar button {
+    width: 100%; /* Los botones también ocupan el ancho completo */
+  }
+}
+/* --- INICIO DE ESTILOS NUEVOS/MODIFICADOS PARA LOS ENLACES DE AUTOR EN EL FEED --- */
+.post-author-link {
+  display: flex; /* Permite alinear el avatar y el texto horizontalmente */
+  align-items: center; /* Centra verticalmente el avatar y el texto */
+  text-decoration: none; /* Elimina el subrayado predeterminado de los enlaces */
+  color: inherit; /* Hereda el color del texto del padre para que el texto no sea azul por defecto */
+}
+
+/* Efecto al pasar el ratón sobre el enlace del autor */
+.post-author-link:hover .post-author {
+  text-decoration: underline; /* Subraya el alias/email */
+  color: #1877f2; /* Cambia el color del texto a azul (similar a Facebook) */
+}
+
+.post-author-link:hover .post-avatar {
+  filter: brightness(0.9); /* Oscurece ligeramente el avatar para un efecto visual */
+}
+/* --- FIN DE ESTILOS NUEVOS/MODIFICADOS --- */
 
 /* --- ESTILOS DE NOTIFICACIONES (COPIADOS DE PROFILE.VUE) --- */
 .notification-area {
