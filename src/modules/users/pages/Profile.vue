@@ -70,20 +70,38 @@
           <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
 
         <div v-if="editingPost?.id === post.id" class="edit-post-inline">
+          <div class="form-group">
             <label>Título:</label>
             <input v-model="editedTitle" class="profile-input" />
-
-            <label>Curso:</label>
-            <input v-model="editedCourse" class="profile-input" />
-
-            <label>Ciclo:</label>
-            <input v-model="editedCycle" class="profile-input" />
-
-            <div class="edit-buttons">
-              <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
-              <button @click="cancelEdit" class="delete-student-button">Cancelar</button>
-            </div>
           </div>
+
+          <div class="form-group">
+            <label>Ciclo:</label>
+            <select v-model="editedCycle" class="profile-input" @change="fetchCoursesForEdit(editedCycle)" required>
+              <option value="" disabled>Selecciona un ciclo</option>
+              <option v-for="cycle in uniqueCycles" :key="cycle" :value="cycle">
+                {{ cycle }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Curso:</label>
+            <select v-model="editedCourse" class="profile-input" :disabled="!editedCycle || loadingCourses" required>
+              <option value="" disabled>Selecciona un curso</option>
+              <option v-if="loadingCourses">Cargando cursos...</option>
+              <option v-for="course in filteredCoursesForEdit" :key="course.course_code" :value="course.course_name">
+                {{ course.course_code }} - {{ course.course_name }}
+              </option>
+            </select>
+            <p v-if="!editedCycle" class="hint-message">Selecciona un ciclo primero para ver los cursos.</p>
+          </div>
+
+          <div class="edit-buttons">
+            <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
+            <button @click="cancelEdit" class="delete-student-button">Cancelar</button>
+          </div>
+        </div>
 
           <div v-if="post.average_rating !== undefined" class="post-rating">
             <strong>Estrellas:</strong>
@@ -134,31 +152,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'; // Importa onUnmounted
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useAuthStore } from '@modules/auth/stores/auth';
 import { usePostStore } from '@modules/posts/stores/post';
-import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
-import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
-import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
+import { supabase } from '@/services/supabase';
+import { useNotificationStore } from '@modules/notifications/stores/notification';
+import TheHeader from '@/components/TheHeader.vue';
 
 // Variables de estado para editar
 const showEditModal = ref(false);
-const editingPost = ref(null); // Publicación que estamos editando
+const editingPost = ref(null);
 const editedTitle = ref('');
 const editedCourse = ref('');
 const editedCycle = ref('');
 
+// --- Nuevos estados para manejar cursos y ciclos ---
+const allCoursesData = ref([]);
+const uniqueCycles = ref([]);
+const filteredCoursesForEdit = ref([]);
+const loadingCourses = ref(false);
+
 // --- Stores ---
 const authStore = useAuthStore();
 const postStore = usePostStore();
-const notificationStore = useNotificationStore(); // Instancia el store de notificaciones
+const notificationStore = useNotificationStore();
 
 // --- Estados Locales para Edición de Perfil ---
 const editableAlias = ref('');
 const newPassword = ref('');
 const updateError = ref(null);
 const updateSuccess = ref(null);
-const avatarFileInput = ref(null); // Ref para el input de archivo oculto
+const avatarFileInput = ref(null);
 
 // --- Estados Locales para Notificaciones ---
 const showNotifications = ref(false);
@@ -176,20 +200,55 @@ const myPosts = computed(() => {
   return [];
 });
 
+// --- Funciones para manejar cursos y ciclos ---
+const fetchAllCourses = async () => {
+  loadingCourses.value = true;
+  try {
+    const { data, error } = await supabase
+      .from('courses_by_cycle')
+      .select('cycle_name, course_code, course_name')
+      .order('cycle_name', { ascending: true })
+      .order('course_code', { ascending: true });
+
+    if (error) throw error;
+    allCoursesData.value = data;
+
+    // Extraer ciclos únicos
+    const cycles = [...new Set(data.map(item => item.cycle_name))];
+    uniqueCycles.value = cycles;
+
+  } catch (err) {
+    console.error('Error al cargar ciclos y cursos:', err.message);
+  } finally {
+    loadingCourses.value = false;
+  }
+};
+
+const fetchCoursesForEdit = (cycle) => {
+  if (!cycle) {
+    filteredCoursesForEdit.value = [];
+    return;
+  }
+  
+  loadingCourses.value = true;
+  filteredCoursesForEdit.value = allCoursesData.value.filter(
+    course => course.cycle_name === cycle
+  );
+  loadingCourses.value = false;
+};
+
 // --- Watchers ---
 watch(() => authStore.user, async (newUser) => {
   if (newUser?.alias) {
     editableAlias.value = newUser.alias;
   }
-  // Si el usuario cambia o se carga, (re)establece las notificaciones en tiempo real
   if (newUser?.id) {
-    //await notificationStore.fetchNotifications(); // Carga inicial
-    notificationStore.setupRealtimeNotifications(); // Inicia la suscripción
+    notificationStore.setupRealtimeNotifications();
     if (newUser.role === 'admin') {
       await fetchAllStudents();
     }
   } else {
-    notificationStore.unsubscribeRealtimeNotifications(); // Limpia la suscripción si no hay usuario
+    notificationStore.unsubscribeRealtimeNotifications();
   }
 }, { immediate: true });
 
@@ -199,35 +258,29 @@ onMounted(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
       await authStore.fetchUserProfile(currentUser.id);
-      // Aquí, si el usuario está logueado y llegamos a esta página,
-      // podríamos querer cargar las notificaciones con el límite por defecto (para el badge).
-      // Aunque el watcher de `authStore.user` ya lo hace implícitamente al inicializar.
     }
+    // Cargar los cursos al montar el componente
+    await fetchAllCourses();
+    postStore.fetchPosts();
   } catch (err) {
     console.error('Error al obtener usuario actual o perfil en Mount:', err.message);
   }
-  postStore.fetchPosts();
 });
-
 
 onUnmounted(() => {
-  // Asegúrate de limpiar la suscripción de Supabase Realtime cuando el componente se desmonte
   notificationStore.unsubscribeRealtimeNotifications();
 });
-
-
 
 // --- Funciones de Edición de Perfil ---
 const updateProfile = async () => {
   updateError.value = null;
   updateSuccess.value = null;
-  authStore.loading = true; // Usa el estado de carga del store de autenticación
+  authStore.loading = true;
 
   try {
     let profileUpdated = false;
     let authUserUpdated = false;
 
-    // 1. Actualizar Alias en la tabla 'users'
     if (editableAlias.value !== authStore.user?.alias) {
       const { error: profileError } = await supabase
         .from('users')
@@ -238,7 +291,6 @@ const updateProfile = async () => {
       profileUpdated = true;
     }
 
-    // 2. Actualizar Contraseña en Supabase Auth
     if (newPassword.value) {
       const { error: authError } = await supabase.auth.updateUser({
         password: newPassword.value,
@@ -248,10 +300,9 @@ const updateProfile = async () => {
     }
 
     if (profileUpdated || authUserUpdated) {
-      // Si algo se actualizó, refrescar los datos del usuario en el store
       await authStore.fetchUserProfile(authStore.user.id);
       updateSuccess.value = 'Perfil actualizado exitosamente.';
-      newPassword.value = ''; // Limpiar el campo de contraseña
+      newPassword.value = '';
     } else {
       updateSuccess.value = 'No se realizaron cambios en el perfil.';
     }
@@ -265,7 +316,7 @@ const updateProfile = async () => {
 };
 
 const openAvatarUpload = () => {
-  avatarFileInput.value.click(); // Simula un clic en el input de tipo file oculto
+  avatarFileInput.value.click();
 };
 
 const handleAvatarChange = async (event) => {
@@ -278,27 +329,23 @@ const handleAvatarChange = async (event) => {
 
   try {
     const fileExt = file.name.split('.').pop();
-    // Path único para el avatar en el storage (ej. 'user_id/timestamp.ext')
     const filePath = `${authStore.user.id}/${Date.now()}.${fileExt}`;
 
-    // Subir el archivo al bucket 'avatars'
     const { error: uploadError } = await supabase.storage
-      .from('avatars') // Asegúrate de que este sea el nombre de tu bucket
+      .from('avatars')
       .upload(filePath, file, {
-        cacheControl: '3600', // Caching por una hora
-        upsert: true, // Sobrescribe si el archivo ya existe
+        cacheControl: '3600',
+        upsert: true,
       });
 
     if (uploadError) throw new Error(`Error al subir avatar: ${uploadError.message}`);
 
-    // Obtener la URL pública del avatar subido
     const { data: publicUrlData } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
     const newAvatarUrl = publicUrlData.publicUrl;
 
-    // Actualizar la columna 'avatar_url' en la tabla 'users'
     const { error: updateErrorDb } = await supabase
       .from('users')
       .update({ avatar_url: newAvatarUrl })
@@ -306,7 +353,6 @@ const handleAvatarChange = async (event) => {
 
     if (updateErrorDb) throw new Error(`Error al actualizar URL del avatar en DB: ${updateErrorDb.message}`);
 
-    // Refrescar los datos del usuario en el store para que la UI se actualice
     await authStore.fetchUserProfile(authStore.user.id);
     updateSuccess.value = 'Avatar actualizado exitosamente.';
 
@@ -322,19 +368,16 @@ const handleAvatarChange = async (event) => {
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value;
   if (showNotifications.value) {
-    // Cargar un máximo de 20 notificaciones para el dropdown
     notificationStore.fetchNotifications(20);
   }
 };
 
 const markAllAsRead = async () => {
   await notificationStore.markAllAsRead();
-  // Después de marcar como leídas, recargamos con el límite del dropdown
   notificationStore.fetchNotifications(20);
 };
 
-
-// --- Funciones de Utilidad de Posts (copiadas de Feed.vue) ---
+// --- Funciones de Utilidad de Posts ---
 const isImage = (fileType) => {
   if (!fileType) return false;
   const lowerCaseType = fileType.toLowerCase();
@@ -346,7 +389,7 @@ const isPdf = (fileType) => {
   return fileType.toLowerCase() === 'pdf';
 };
 
-// --- Acciones de Posts (Editar/Eliminar propias publicaciones) ---
+// --- Acciones de Posts ---
 function editPost(postId) {
   const post = myPosts.value.find(p => p.id === postId);
   if (post) {
@@ -354,6 +397,10 @@ function editPost(postId) {
     editedTitle.value = post.title;
     editedCourse.value = post.course;
     editedCycle.value = post.cycle;
+    // Cargar cursos para el ciclo de la publicación que se está editando
+    if (post.cycle) {
+      fetchCoursesForEdit(post.cycle);
+    }
   }
 }
 
@@ -373,8 +420,6 @@ const saveEditedPost = async () => {
 
     showEditModal.value = false;
     editingPost.value = null;
-    
-    // Opcional: mostrar notificación de éxito
     alert('¡Publicación actualizada correctamente!');
   } catch (err) {
     console.error('Error en saveEditedPost:', err);
@@ -385,8 +430,6 @@ const saveEditedPost = async () => {
 const confirmDeletePost = async (postId) => {
   if (confirm('¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.')) {
     try {
-      // Necesitarás implementar una acción 'deletePost' en tu postStore.js
-      // que haga supabase.from('posts').delete().eq('id', postId);
       const { error: deleteError } = await supabase
         .from('posts')
         .delete()
@@ -395,7 +438,6 @@ const confirmDeletePost = async (postId) => {
       if (deleteError) throw deleteError;
 
       alert('Publicación eliminada exitosamente.');
-      // Después de eliminar, recargar las publicaciones para actualizar la lista
       postStore.fetchPosts();
     } catch (error) {
       alert('Error al eliminar publicación: ' + error.message);
@@ -403,9 +445,6 @@ const confirmDeletePost = async (postId) => {
     }
   }
 };
-
-
-
 </script>
 
 <style scoped>
