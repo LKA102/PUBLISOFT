@@ -331,6 +331,26 @@ onUnmounted(() => {
   min-width: 120px; /* Ancho mínimo para cada selector individual */
 }
 
+.filter-select option{
+  color: #333; /* Color del texto de las opciones */
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1em;
+  background-color:rgb(255, 255, 255);
+  cursor: pointer;
+  outline: none;
+  appearance: none; /* Elimina estilos por defecto del sistema */
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13.2-6.4H18.4c-4.9%200-9.2%202.2-12.8%206.4-3.6%204.2-4.7%209.7-3.2%2014.5l133.7%20163.6c2.7%203.4%206.7%205.5%2011.2%205.5s8.5-2.1%2011.2-5.5L287%2083.9c1.5-4.8.4-10.3-3.2-14.5z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px top 50%;
+  background-size: 12px auto;
+  padding-right: 30px; /* Espacio para el icono de flecha */
+  /* Permite que los selectores se estiren o encojan de manera flexible */
+  flex-grow: 1; 
+  min-width: 120px; /* Ancho mínimo para cada selector individual */
+}
+
 .filter-select:hover {
   background-color: #155bb5;
   border-color: #155bb5;
