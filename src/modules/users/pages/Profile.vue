@@ -143,6 +143,24 @@
       <p v-if="deleteStudentError" class="error-message">{{ deleteStudentError }}</p>
       <p v-if="deleteStudentSuccess" class="success-message">{{ deleteStudentSuccess }}</p>
     </section>
+
+      <!-- MODAL para Editar Publicación -->
+  <div v-if="showEditModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Editar Publicación</h3>
+      <label>Título:</label>
+      <input v-model="editedTitle" class="profile-input" />
+      <label>Curso:</label>
+      <input v-model="editedCourse" class="profile-input" />
+      <label>Ciclo:</label>
+      <input v-model="editedCycle" class="profile-input" />
+      <div class="modal-buttons">
+        <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
+        <button @click="showEditModal = false" class="delete-student-button">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   </div>
 </template>
 
@@ -152,6 +170,13 @@ import { useAuthStore } from '@modules/auth/stores/auth';
 import { usePostStore } from '@modules/posts/stores/post';
 import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
 import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
+
+// Variables de estado para editar
+const showEditModal = ref(false);
+const editingPost = ref(null); // Publicación que estamos editando
+const editedTitle = ref('');
+const editedCourse = ref('');
+const editedCycle = ref('');
 
 // --- Stores ---
 const authStore = useAuthStore();
@@ -353,8 +378,36 @@ const isPdf = (fileType) => {
 
 // --- Acciones de Posts (Editar/Eliminar propias publicaciones) ---
 const editPost = (postId) => {
-  alert(`Funcionalidad de editar publicación ${postId} pendiente.`);
-  // Aquí puedes redirigir a una página de edición o abrir un modal
+  const post = myPosts.value.find(p => p.id === postId);
+  if (!post) return;
+
+  editingPost.value = post;
+  editedTitle.value = post.title;
+  editedCourse.value = post.course;
+  editedCycle.value = post.cycle;
+  showEditModal.value = true;
+
+};
+
+const saveEditedPost = async () => {
+  if (!editingPost.value) return;
+
+  try {
+    await postStore.updatePost(editingPost.value.id, {
+      title: editedTitle.value.trim(),
+      course: editedCourse.value.trim(),
+      cycle: editedCycle.value.trim(),
+    });
+
+    showEditModal.value = false;
+    editingPost.value = null;
+    
+    // Opcional: mostrar notificación de éxito
+    alert('¡Publicación actualizada correctamente!');
+  } catch (err) {
+    console.error('Error en saveEditedPost:', err);
+    alert(`Error: ${err.message}`);
+  }
 };
 
 const confirmDeletePost = async (postId) => {
