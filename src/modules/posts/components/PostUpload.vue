@@ -1,12 +1,19 @@
 <template>
   <div class="post-upload-container">
-    <input
-      type="text"
-      placeholder="¿Qué apunte publicarás hoy?"
-      class="upload-placeholder"
-      @focus="openModal"
-      readonly
-    />
+    <div class="upload-input-wrapper">
+      <img
+        :src="authStore.user?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
+        alt="Avatar del usuario"
+        class="user-avatar"
+      />
+      <input
+        type="text"
+        placeholder="¿Qué apunte publicarás hoy?"
+        class="upload-placeholder"
+        @focus="openModal"
+        readonly
+      />
+    </div>
 
     <div v-if="isModalOpen" class="modal-overlay">
       <div class="post-upload-modal">
@@ -61,10 +68,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'; // Agrega 'onMounted' y 'watch'
+import { ref, onMounted, watch } from 'vue';
 import { usePostStore } from '@modules/posts/stores/post';
+import { useAuthStore } from '@modules/auth/stores/auth'; // Importa el authStore
 import { storeToRefs } from 'pinia';
-import { supabase } from '@/services/supabase'; // Asegúrate de importar Supabase
+import { supabase } from '@/services/supabase';
+
+// Agrega el authStore a las dependencias
+const authStore = useAuthStore();
 
 const postStore = usePostStore();
 const { loading, error } = storeToRefs(postStore);
@@ -191,6 +202,29 @@ onMounted(() => {
 .post-upload-container {
   margin-bottom: 20px;
 }
+
+.upload-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color:#fff;
+  border-radius: 25px;
+  padding: 8px 15px;
+  transition: background-color 0.2s ease;
+}
+
+.upload-input-wrapper:hover {
+  background-color: #e4e6eb;
+}
+
+.upload-input-wrapper img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+}
+
 
 /* Estilo para el input pequeño tipo Facebook */
 .upload-placeholder {

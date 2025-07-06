@@ -1,11 +1,21 @@
 <template>
   <header class="app-header">
+    <!-- Logo PUBLISOFT a la izquierda -->
+    <router-link to="/feed" class="logo-link">
+      <h1 class="logo">PUBLISOFT</h1>
+    </router-link>
+
+    <!-- Botón de volver (condicional) -->
     <router-link v-if="showBackButton" :to="backRoute" class="back-to-previous">
       <i class="fas fa-arrow-left"></i> Volver
     </router-link>
+
+    <!-- Título del header -->
     <h2 class="header-title">{{ headerTitle }}</h2>
 
+    <!-- Acciones del header (derecha) -->
     <div class="header-actions">
+      <!-- Área de notificaciones -->
       <div class="notification-area">
         <button @click="toggleNotifications" class="notification-icon">
           <i class="fas fa-bell"></i>
@@ -35,6 +45,8 @@
           </button>
         </div>
       </div>
+
+      <!-- Menú desplegable de perfil -->
       <div v-if="authStore.user" class="dropdown-container" @click="toggleDropdown">
         <button class="profile-dropdown-toggle">
           <img
@@ -67,15 +79,15 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/modules/auth/stores/auth'; // Ajusta la ruta si es necesario
-import { useNotificationStore } from '@/modules/notifications/stores/notification'; // Ajusta la ruta si es necesario
+import { useAuthStore } from '@/modules/auth/stores/auth';
+import { useNotificationStore } from '@/modules/notifications/stores/notification';
 
 // Definir las props que el componente recibirá
 const props = defineProps({
   headerTitle: {
     type: String,
     required: false,
-    default: 'PUBLISOFT'
+    default: ''
   },
   showBackButton: {
     type: Boolean,
@@ -83,7 +95,7 @@ const props = defineProps({
   },
   backRoute: {
     type: String,
-    default: '/feed' // Ruta predeterminada para el botón de volver
+    default: '/feed'
   }
 });
 
@@ -145,28 +157,46 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #fff; /* Fondo blanco para el header */
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #1E3984; /* Azul oscuro */
+  color: white; /* Texto blanco por defecto */
+  padding: 0 20px;
+  height: 60px;
+  position: fixed; /* Navbar fijo */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.logo-link {
+  text-decoration: none;
+  color: white; /* Texto blanco para el logo */
+  font-weight: bold;
+  font-size: 1.5em;
+  margin-right: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  margin: 0;
+  font-size: 1.2em;
 }
 
 .back-to-previous {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #1877f2;
+  color: white; /* Texto blanco para el botón de volver */
   text-decoration: none;
   font-weight: 600;
-  transition: color 0.2s ease;
-  margin-right: 20px; /* Espacio entre el botón de volver y el título */
+  transition: opacity 0.2s ease;
+  margin-right: 20px;
 }
 
 .back-to-previous:hover {
-  color: #155bb5;
+  opacity: 0.8;
 }
 
 .back-to-previous i {
@@ -174,12 +204,12 @@ onUnmounted(() => {
 }
 
 .header-title {
-  color: #333;
-  margin: 0 auto; /* Centra el título si no hay botón de volver */
-  font-size: 1.8em;
+  color: white; /* Texto blanco para el título */
+  margin: 0;
+  font-size: 1.2em;
   font-weight: bold;
-  flex-grow: 1; /* Permite que el título ocupe el espacio restante */
-  text-align: center; /* Alinea el texto del título al centro */
+  flex-grow: 1;
+  text-align: center;
 }
 
 .header-actions {
@@ -187,7 +217,7 @@ onUnmounted(() => {
   display: flex;
   gap: 15px;
   align-items: center;
-  margin-left: auto; /* Empuja los elementos de acción a la derecha */
+  margin-left: auto;
 }
 
 /* Notification Area */
@@ -196,31 +226,35 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
 }
+
 .notification-icon {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.8em;
-  color: #333;
-  padding: 5px;
+  font-size: 1.3em;
+  color: white; /* Icono blanco */
+  padding: 8px;
   border-radius: 50%;
   transition: background-color 0.2s ease;
 }
+
 .notification-icon:hover {
-  background-color: #e0e0e0;
+  background-color: rgba(255, 255, 255, 0.1);
 }
+
 .notification-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: 0;
+  right: 0;
   background-color: #ff4d4f;
   color: white;
   border-radius: 50%;
-  padding: 3px 7px;
+  padding: 2px 6px;
   font-size: 0.7em;
   font-weight: bold;
   pointer-events: none;
 }
+
 .notifications-dropdown {
   position: absolute;
   top: 100%;
@@ -236,29 +270,36 @@ onUnmounted(() => {
   padding: 10px;
   margin-top: 10px;
 }
+
 .notifications-dropdown ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
+
 .notifications-dropdown li {
   padding: 10px;
   border-bottom: 1px solid #eee;
   cursor: pointer;
+  color: #333; /* Texto oscuro en el dropdown */
 }
+
 .notifications-dropdown li:last-child {
   border-bottom: none;
 }
+
 .notifications-dropdown li.unread {
   background-color: #e6f7ff;
   font-weight: 600;
 }
+
 .notifications-dropdown li small {
   display: block;
   font-size: 0.8em;
   color: #888;
   margin-top: 5px;
 }
+
 .view-all-notifications-button {
   display: block;
   text-align: center;
@@ -273,9 +314,11 @@ onUnmounted(() => {
   width: 100%;
   box-sizing: border-box;
 }
+
 .view-all-notifications-button:hover {
   background-color: #e4e6eb;
 }
+
 .mark-read-button {
   background-color: #007bff;
   color: white;
@@ -288,6 +331,7 @@ onUnmounted(() => {
   width: 100%;
   box-sizing: border-box;
 }
+
 .mark-read-button:hover {
   background-color: #0056b3;
 }
@@ -299,6 +343,7 @@ onUnmounted(() => {
   cursor: pointer;
   z-index: 100;
 }
+
 .profile-dropdown-toggle {
   display: flex;
   align-items: center;
@@ -308,31 +353,38 @@ onUnmounted(() => {
   border-radius: 20px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  color: white; /* Texto blanco para el perfil */
 }
+
 .profile-dropdown-toggle:hover {
-  background-color: #e4e6eb;
+  background-color: rgba(255, 255, 255, 0.1);
 }
+
 .profile-avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
   margin-right: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
+
 .profile-alias {
   font-weight: bold;
   font-size: 0.95em;
   white-space: nowrap;
-  color: #333;
 }
+
 .dropdown-arrow {
   margin-left: 8px;
   transition: transform 0.2s ease;
+  color: white; /* Flecha blanca */
 }
+
 .dropdown-arrow.rotate-180 {
   transform: rotate(180deg);
 }
+
 .dropdown-menu {
   position: absolute;
   top: 100%;
@@ -347,6 +399,7 @@ onUnmounted(() => {
   margin-top: 8px;
   overflow: hidden;
 }
+
 .dropdown-item {
   display: flex;
   align-items: center;
@@ -361,46 +414,78 @@ onUnmounted(() => {
   background: none;
   cursor: pointer;
 }
+
 .dropdown-item:hover {
   background-color: #f0f2f5;
   color: #1877f2;
 }
+
 .dropdown-icon {
   margin-right: 10px;
   font-size: 1.1em;
   color: #606770;
 }
+
 .dropdown-item:hover .dropdown-icon {
   color: #1877f2;
 }
+
 .dropdown-item.logout-button-in-menu {
   color: #dc3545;
   border-top: 1px solid #eee;
   margin-top: 8px;
   padding-top: 10px;
 }
+
 .dropdown-item.logout-button-in-menu:hover {
   background-color: #fee2e2;
   color: #c82333;
 }
+
 .dropdown-item.logout-button-in-menu .dropdown-icon {
   color: #dc3545;
 }
+
 .dropdown-item.logout-button-in-menu:hover .dropdown-icon {
   color: #c82333;
 }
 
-/* Mensajes de estado (cargando, error, sin publicaciones) */
+/* Mensajes de estado */
 .status-message {
   text-align: center;
   color: #666;
   font-style: italic;
-  padding: 5px; /* Más compacto para el dropdown */
+  padding: 5px;
 }
+
 .error-message {
   color: #e53e3e;
   font-weight: bold;
   text-align: center;
-  padding: 5px; /* Más compacto para el dropdown */
+  padding: 5px;
+}
+
+/* Ajuste para el contenido principal (evitar que quede detrás del navbar fijo) */
+body {
+  padding-top: 60px;
+}
+
+@media (max-width: 768px) {
+  .profile-alias {
+    display: none;
+  }
+  
+  .dropdown-arrow {
+    display: none;
+  }
+  
+  .header-title {
+    font-size: 1em;
+    margin-left: 10px;
+  }
+  
+  .logo {
+    font-size: 1em;
+  }
 }
 </style>

@@ -1,8 +1,5 @@
 <template>
   <div class="profile-page">
-    <TheHeader
-      :showBackButton="true"
-      backRoute="/feed"/>
 
     <!-- Sección de Perfil -->
     <section class="profile-details">

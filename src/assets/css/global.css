@@ -1,0 +1,127 @@
+#app {
+  background-color: #f0f2f5; /* Fondo claro */
+}
+
+h2 {
+  color: #1E3984 !important; /* Color azul oscuro */
+  font-weight: bold !important;
+  font-size: 1.5em !important;
+}
+
+h3 {
+  color: #4365c1 !important; /* Color azul oscuro */
+  font-weight: bold !important;
+  font-size: 1.1em !important;
+}
+
+
+/* ESTILOS PARA LOGIN ACTUALIZADOS */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.auth-title {
+  font-size: 2em;
+  color: #1E3984; /* Color azul oscuro */
+  margin-bottom: 25px;
+  font-weight: bold;
+}
+
+.form-group {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.form-group label {
+  color: #1E3984; /* Color azul oscuro para las etiquetas */
+  font-weight: 600;
+}
+
+.auth-input {
+  width: calc(100% - 22px);
+  padding: 12px 10px;
+  border: 1px solid #1E3984; /* Borde azul oscuro */
+  background-color: #DBE2F6; /* Fondo azul claro */
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 1em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: #1E3984; /* Color del texto azul oscuro */
+}
+
+.auth-input::placeholder {
+  color: #6D7FB3; /* Color más claro para el placeholder */
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: #1E3984;
+  box-shadow: 0 0 0 2px rgba(30, 57, 132, 0.2); /* Sombra con el nuevo color */
+}
+
+.auth-button {
+  width: 100%;
+  padding: 12px 20px;
+  background-color: #1E3984; /* Color azul oscuro */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: bold;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+  margin-top: 15px;
+}
+
+.auth-button:hover {
+  background-color: #142A6B; /* Color azul más oscuro al hover */
+}
+
+.auth-link {
+  margin-top: 20px;
+  color: #65676b;
+  font-size: 0.95em;
+}
+
+.auth-link a {
+  color: #1E3984; /* Color azul oscuro */
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+/* ESTILOS ADICIONALES PARA REGISTER (complementan los del login) */
+.error-message {
+  color: #e53e3e;
+  margin-top: 15px;
+  font-size: 0.9em;
+  background-color: #ffebeb;
+  border: 1px solid #e53e3e;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.auth-button:disabled {
+  background-color: #6D7FB3; /* Color azul más claro para estado disabled */
+  cursor: not-allowed;
+  opacity: 0.7;
+}

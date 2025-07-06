@@ -6,6 +6,7 @@ import router from './router'; // Si usas Vue Router
 import { supabase } from '@/services/supabase'; // Tu archivo de configuración de Supabase
 import { useAuthStore } from '@/modules/auth/stores/auth'; // Tu store de autenticación
 // Asegúrate de que tu CSS de Tailwind se importa en algún lugar
+import './assets/css/global.css'; // Añadido
 import './assets/tailwind.css'; // La ruta correcta si el archivo está en src/assets/
 
 const app = createApp(App);

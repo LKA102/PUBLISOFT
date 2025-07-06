@@ -1,10 +1,5 @@
 <template>
   <div class="profile-page">
-    
-    <TheHeader
-      :showBackButton="true"
-      backRoute="/feed"
-    />
 
     <section v-if="loadingProfile" class="status-message">
       Cargando perfil...

@@ -1,9 +1,5 @@
 <template>
   <div class="ranking-page">
-   <TheHeader
-      :showBackButton="true"
-      backRoute="/feed"
-    />
 
     <p v-if="rankingStore.loading" class="status-message">Cargando ranking...</p>
     <p v-else-if="rankingStore.error" class="error-message">Error: {{ rankingStore.error }}</p>

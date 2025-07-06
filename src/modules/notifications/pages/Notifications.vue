@@ -1,10 +1,6 @@
 <template>
   <div class="notifications-page">
    
-    <TheHeader
-      :showBackButton="true"
-      backRoute="/feed"
-    />
     <h1>Todas tus Notificaciones</h1>
       <button v-if="notificationStore.notifications.length > 0 && notificationStore.unreadNotificationsCount > 0" @click="markAllAsRead" class="mark-read-button-page">
         Marcar todas como leídas
