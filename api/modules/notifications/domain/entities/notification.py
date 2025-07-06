@@ -18,6 +18,7 @@ class Notification(BaseEntity):
         self.__type: NotificationTypeEnum = kwargs.get('type')
         self.__user_emisor_id: uuid.UUID = kwargs.get('user_emisor_id')
         self.__user_receptor_id: uuid.UUID = kwargs.get('user_receptor_id')
+        self.__leido: bool = kwargs.get('leido')
         self.events: set = set()
 
     def __eq__(self, other):
@@ -76,14 +77,18 @@ class Notification(BaseEntity):
 
 
     @classmethod
-    def create(cls, id: int, title: str, message: str, type: str, user_emisor_id: uuid.UUID, user_receptor_id: uuid.UUID,
-               leido: bool, fecha_creacion: datetime) -> 'Notification':
+    def create(cls, title: str, message: str, type: str, user_emisor_id: uuid.UUID, user_receptor_id: uuid.UUID,
+               leido: bool) -> 'Notification':
+
+        fecha_creacion = datetime.now(timezone.utc)
+        
+        if type not in NotificationTypeEnum._value2member_map_:
+            raise ValueError(f"Tipo de notificación inválido: {type}. Debe ser uno de {list(NotificationTypeEnum._value2member_map_.keys())}")
 
         notification = cls(
-            id=id,
             title=title,
             message=message,
-            type=type,
+            type=NotificationTypeEnum(type),
             leido=leido,
             user_emisor_id=user_emisor_id,
             user_receptor_id=user_receptor_id,

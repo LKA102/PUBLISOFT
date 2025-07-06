@@ -15,10 +15,10 @@ class BaseEntitySQLAlchemy:
 
     @staticmethod
     def base_entity_to_orm(entity: BaseEntity, entity_orm: 'BaseEntitySQLAlchemy'):
-        entity_orm.id = entity.id
-        entity_orm.created_at = entity.created_at
-        entity_orm.updated_at = entity.updated_at
-        
+        if entity.id is not None:
+            entity_orm.id = entity.id
+        entity_orm.fecha_creacion = entity.fecha_creacion
+
     @staticmethod
     def orm_to_base_entity(entity_orm):
         return {

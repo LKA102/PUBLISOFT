@@ -13,7 +13,7 @@ class NotificationPublicAPI:
         command = CreateNotificationCommand(
             title=notification_data.get("title"),
             message=notification_data.get("message"),
-            type=notification_data.get("type"),
+            type_=notification_data.get("type"),
             user_emisor_id=notification_data.get("user_emisor_id"),
             user_receptor_id=notification_data.get("user_receptor_id")
         )

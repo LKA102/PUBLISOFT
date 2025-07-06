@@ -5,12 +5,10 @@ from common.event import Event
 from common.abstract_message_bus import AbstractMessageBus
 
 # Import commands and events for Notifications aggregate
-#from modules.notifications.domain.commands.user_commands import *
-#from modules.auth.domain.events.user_events import *
+from modules.notifications.domain.commands.notification_commands import *
 
-# Import handlers for commands and events for User aggregate
-#from modules.auth.application.handlers.commands.user_command_handlers import UserCommandHandler
-#from modules.auth.application.handlers.events.user_event_handlers import UserEventHandler
+# Import handlers for commands and events for Notifications aggregate
+from modules.notifications.application.handlers.commands.notifications_handler import NotificationCommandHandler
 
 class MessageBus(AbstractMessageBus):
     def handle(self, message, uok: AbstractUnitOfWork):
@@ -30,10 +28,7 @@ class MessageBus(AbstractMessageBus):
         return self._results
 
 # Commands registration
-'''MessageBus.register_command_handler(RegisterUserCommand, UserCommandHandler.handle_create_user_command)
-MessageBus.register_command_handler(LoginUserCommand, UserCommandHandler.handle_login_user_command)
-MessageBus.register_command_handler(UpdateUserCommand, UserCommandHandler.handle_update_user_command)
-MessageBus.register_command_handler(DisableUserCommand, UserCommandHandler.handle_disable_user_command)'''
+MessageBus.register_command_handler(CreateNotificationCommand, NotificationCommandHandler.handle_create_notification)
+MessageBus.register_command_handler(UpdateNotificationCommand, NotificationCommandHandler.handle_update_notification)
 
 # Events registration
-# MessageBus.register_event_handler(UserCreatedEvent, [UserEventHandler.handle_user_created_event])

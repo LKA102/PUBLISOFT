@@ -11,12 +11,36 @@ class NotificationCommandHandler:
             # Create the notification entity
             notification = Notification.create(
                 title=command.title,
-                content=command.content,
-                recipient=command.recipient,
+                message=command.message,
                 type=command.type,
-                status=command.status
+                user_emisor_id=command.user_emisor_id,
+                user_receptor_id=command.user_receptor_id,
+                leido=False
             )
 
             # Persist the notification entity
             uok.notification_repository.save(notification)
+            uok.commit()
+            
+    @staticmethod
+    def handle_update_notification(command: UpdateNotificationCommand, uok: SqlAlchemyUnitOfWork):
+        with uok:
+            # Retrieve the existing notification
+            notification = uok.notification_repository.load(command.id)
+            if not notification:
+                raise ValueError(f"Notification with id {command.id} not found")
+            
+            # If title or message are provided, update them as well
+            if command.title is not None:
+                notification.title = command.title
+            if command.message is not None:
+                notification.message = command.message
+            if command.type is not None:
+                notification.type = command.type
+            if command.leido is not None:
+                notification.leido = command.leido
+            
+
+            # Persist the updated notification entity
+            uok.notification_repository.update(notification)
             uok.commit()

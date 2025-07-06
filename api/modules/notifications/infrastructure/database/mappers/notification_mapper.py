@@ -19,7 +19,7 @@ class NotificationMapper:
         )
 
     @staticmethod
-    def to_orm(notification: Notification, session) -> NotificationSQLAlchemy:
+    def to_orm(notification: Notification) -> NotificationSQLAlchemy:
         # Convert the domain entity to the ORM model
         notification_orm = NotificationSQLAlchemy()
         notification_orm.user_emisor_id = notification.user_emisor_id

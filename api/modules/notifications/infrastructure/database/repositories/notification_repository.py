@@ -11,7 +11,7 @@ class NotificationRepositorySQLAlchemy(INotificationRepository):
         self.session = session
 
     def _save(self, notification: Notification) -> Notification:
-        notification_orm = NotificationMapper.to_orm(notification, self.session)
+        notification_orm = NotificationMapper.to_orm(notification)
         self.session.add(notification_orm)
         return notification
     
@@ -38,9 +38,6 @@ class NotificationRepositorySQLAlchemy(INotificationRepository):
 
         # Perform the update
         rows_updated = self.session.query(NotificationSQLAlchemy).filter_by(id=notification.id).update(update_data)
-
-        # Commit the changes
-        self.session.commit()
 
         # If at least one row was updated, return the updated entity
         if rows_updated:
