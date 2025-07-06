@@ -111,23 +111,7 @@
       </div>
 </section>
 
-    <section v-if="authStore.user?.role === 'admin'" class="admin-section">
-      <h2>Gestión de Estudiantes</h2>
-      <p v-if="!allStudents || allStudents.length === 0" class="status-message">No hay estudiantes registrados.</p>
-      <div v-else class="student-list">
-        <ul>
-          <li v-for="student in allStudents" :key="student.id" class="student-item">
-            <span>
-              {{ student.alias || student.email }}
-              <span v-if="student.student_code">(Código: {{ student.student_code }})</span>
-            </span>
-            <button @click="confirmDeleteStudent(student.id)" class="delete-student-button">Eliminar</button>
-          </li>
-        </ul>
-      </div>
-      <p v-if="deleteStudentError" class="error-message">{{ deleteStudentError }}</p>
-      <p v-if="deleteStudentSuccess" class="success-message">{{ deleteStudentSuccess }}</p>
-    </section>
+    
 
       <!-- MODAL para Editar Publicación -->
   <div v-if="showEditModal" class="modal-overlay">
@@ -421,109 +405,6 @@ const confirmDeletePost = async (postId) => {
 };
 
 
-// --- Funciones de Administración (Eliminar Estudiantes) ---
-const fetchAllStudents = async () => {
-  deleteStudentError.value = null;
-  try {
-    // Busca usuarios con rol 'student'.
-    // Asumo que 'student_code' está directamente en la tabla 'users' o que la relación es simple.
-    // Si 'student_code' está en una tabla 'students' separada y no la obtienes automáticamente
-    // a través de la relación de Supabase, necesitarás un JOIN o una lógica adicional.
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, alias, role, students(code)') // Selecciona 'students(code)' para obtener el código si existe
-      .eq('role', 'student');
-
-    if (error) throw error;
-
-    // Mapea los datos para incluir el código de estudiante directamente
-    allStudents.value = data.map(user => ({
-      ...user,
-      student_code: user.students?.[0]?.code || 'N/A' // Extrae el código si existe
-    }));
-
-  } catch (err) {
-    deleteStudentError.value = `Error al cargar estudiantes: ${err.message}`;
-    console.error('Error fetching all students:', err);
-  }
-};
-
-const confirmDeleteStudent = async (studentIdToDelete) => {
-  if (confirm('¡ADVERTENCIA! ¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a este estudiante y todos sus datos?')) {
-    await deleteStudent(studentIdToDelete);
-  }
-};
-
-const deleteStudent = async (studentIdToDelete) => {
-    deleteStudentError.value = null;
-    deleteStudentSuccess.value = null;
-    try {
-        // --- ADVERTENCIA DE SEGURIDAD CRÍTICA ---
-        // Eliminar usuarios y sus datos asociados directamente desde el cliente NO es lo más seguro ni robusto.
-        // Lo *altamente* recomendado es:
-        // 1. Crear una función de PostgreSQL en Supabase que reciba el user_id y realice la eliminación en cascada (students, posts, users, auth.users).
-        // 2. Crear una Supabase Edge Function que llame a esa función de PostgreSQL.
-        // 3. Llamar a la Edge Function desde el cliente.
-        // Esto asegura que la eliminación sea atómica, segura (usando Service Role Key en el backend) y consistente.
-        // La implementación a continuación es solo para fines de demostración/prueba y podría tener problemas de permisos o consistencia con RLS estrictas.
-
-        // 1. Eliminar publicaciones del estudiante
-        console.log(`Eliminando publicaciones del usuario ${studentIdToDelete}...`);
-        const { error: postsDeleteError } = await supabase
-            .from('posts')
-            .delete()
-            .eq('user_id', studentIdToDelete);
-        if (postsDeleteError) {
-            console.warn(`Advertencia: No se pudieron eliminar todas las publicaciones del estudiante: ${postsDeleteError.message}`);
-            // No lanzamos error para permitir que continúe con la eliminación del usuario,
-            // pero es importante registrar esto.
-        }
-
-        // 2. Eliminar de la tabla 'students' (si aplica)
-        console.log(`Eliminando de la tabla students al usuario ${studentIdToDelete}...`);
-        const { error: studentDeleteError } = await supabase
-            .from('students')
-            .delete()
-            .eq('user_id', studentIdToDelete);
-
-        if (studentDeleteError) {
-            console.error('Error deleting from students:', studentDeleteError.message);
-            throw new Error(`Error al eliminar datos de estudiante: ${studentDeleteError.message}`);
-        }
-
-        // 3. Eliminar de la tabla 'users' (perfil)
-        console.log(`Eliminando de la tabla users al usuario ${studentIdToDelete}...`);
-        const { error: userProfileDeleteError } = await supabase
-            .from('users')
-            .delete()
-            .eq('id', studentIdToDelete);
-
-        if (userProfileDeleteError) {
-            console.error('Error deleting from users:', userProfileDeleteError.message);
-            throw new Error(`Error al eliminar perfil de usuario: ${userProfileDeleteError.message}`);
-        }
-
-        // 4. Eliminar de Supabase Auth (auth.users)
-        // ESTO REQUIERE PERMISOS DE ADMINISTRADOR EN SUPABASE.
-        // Si usas RLS en auth.users, esta operación desde el cliente fallará
-        // a menos que el usuario logueado tenga permisos muy elevados
-        // o si usas la clave de servicio (que NO debe estar en el cliente).
-        console.log(`Eliminando de auth.users al usuario ${studentIdToDelete}...`);
-        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(studentIdToDelete);
-
-        if (authDeleteError) {
-            console.error('Error deleting from auth.users:', authDeleteError.message);
-            throw new Error(`Error al eliminar usuario de autenticación: ${authDeleteError.message}. Necesitas usar una función de servidor con la clave de servicio.`);
-        }
-
-        deleteStudentSuccess.value = 'Estudiante y todos sus datos eliminados exitosamente.';
-        alert(deleteStudentSuccess.value);
-        await fetchAllStudents(); // Refrescar la lista de estudiantes
-    } catch (err) {
-        deleteStudentError.value = err.message || 'Error desconocido al eliminar estudiante.';
-        console.error('Error deleting student:', err);
-    }
-};
 
 </script>
 
