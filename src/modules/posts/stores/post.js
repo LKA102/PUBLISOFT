@@ -207,5 +207,66 @@ export const usePostStore = defineStore('post', {
         this.error = 'Error al cargar los ciclos.';
       }
     },
+
+  async updatePost(postId, updateFields) {
+  this.loading = true;
+  this.error = null;
+  
+  try {
+    const authStore = useAuthStore();
+    const currentUserId = authStore.user?.id;
+
+    // 1. Verificar que el post existe y pertenece al usuario
+    const { data: existingPost, error: fetchError } = await supabase
+      .from('posts')
+      .select('id, user_id')
+      .eq('id', postId)
+      .single();
+
+    if (fetchError || !existingPost) {
+      throw new Error(fetchError?.message || 'La publicación no existe');
+    }
+
+    if (existingPost.user_id !== currentUserId) {
+      throw new Error('No tienes permiso para editar esta publicación');
+    }
+
+    // 2. Actualización directa SIN esperar respuesta
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update(updateFields)
+      .eq('id', postId);
+
+    if (updateError) throw updateError;
+
+    // 3. Actualizar el estado local MANUALMENTE
+    const index = this.posts.findIndex(post => post.id === postId);
+    if (index !== -1) {
+      this.posts[index] = {
+        ...this.posts[index],
+        ...updateFields,
+        updated_at: new Date().toISOString() // Agregar marca de tiempo
+      };
+    }
+
+    // 4. Opcional: Recargar datos desde el servidor
+    await this.fetchPosts();
+
+    return this.posts[index];
+    
+  } catch (err) {
+    this.error = err.message;
+    console.error('Error en updatePost:', {
+      error: err,
+      postId,
+      currentUser: authStore.user?.id,
+      updateFields
+    });
+    throw err;
+  } finally {
+    this.loading = false;
+  }
+}
+
   }
 });
