@@ -6,8 +6,7 @@ import Register from '@/modules/auth/pages/Register.vue'
 import Feed from '@/modules/users/pages/Feed.vue'
 import MyPublications from '@/modules/posts/pages/MyPublications.vue'
 import Profile from '@/modules/users/pages/Profile.vue'
-import Notifications from '@/modules/users/pages/Notifications.vue'
-import Ranking from '@modules/ranking/pages/Ranking.vue'
+import NotificationsPage from '@/modules/notifications/pages/Notifications.vue';import Ranking from '@modules/ranking/pages/Ranking.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Login },
@@ -16,7 +15,7 @@ const routes = [
   { path: '/feed', name: 'Feed', component: Feed },
   { path: '/myposts', name: 'MyPublications', component: MyPublications },
   { path: '/profile', name: 'Profile', component: Profile },
-  { path: '/notifications', name: 'Notifications', component: Notifications },
+{ path: '/notifications', name: 'Notifications', component: NotificationsPage },
   { path: '/ranking', name: 'Ranking', component: Ranking }
 ]
 

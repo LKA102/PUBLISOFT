@@ -2,7 +2,37 @@
   <div class="feed-page">
     <header class="feed-header">
       <h2 class="header-title">PUBLISOFT</h2>
+
       <div class="header-actions">
+        <div class="notification-area">
+          <button @click="toggleNotifications" class="notification-icon">
+            <i class="fas fa-bell"></i>
+            <span v-if="notificationStore.unreadNotificationsCount > 0" class="notification-badge">
+              {{ notificationStore.unreadNotificationsCount }}
+            </span>
+          </button>
+          <div v-if="showNotifications" class="notifications-dropdown">
+            <p v-if="notificationStore.loading" class="status-message">Cargando notificaciones...</p>
+            <p v-else-if="notificationStore.error" class="error-message">{{ notificationStore.error }}</p>
+            <ul v-else-if="notificationStore.notifications.length > 0">
+              <li v-for="notif in notificationStore.notifications" :key="notif.id" :class="{ 'unread': !notif.read }">
+                {{ notif.message }}
+                <br>
+                <small>{{ new Date(notif.created_at).toLocaleString('es-ES') }}</small>
+              </li>
+            </ul>
+            <p v-else class="status-message">No hay notificaciones.</p>
+
+            <router-link to="/notifications" class="view-all-notifications-button">
+              Ver todas las notificaciones ({{ notificationStore.notifications.length }} mostradas)
+            </router-link>
+
+            <button v-if="notificationStore.notifications.length > 0 && notificationStore.unreadNotificationsCount > 0"
+                    @click="markAllAsRead" class="mark-read-button">
+              Marcar todas como leídas
+            </button>
+          </div>
+        </div>
         <div v-if="authStore.user" class="dropdown-container" @click="toggleDropdown">
           <button class="profile-dropdown-toggle">
             <img
@@ -28,8 +58,7 @@
             </button>
           </div>
         </div>
-        
-        </div>
+      </div>
     </header>
 
     <PostUpload />
@@ -91,16 +120,36 @@ import { useRouter } from 'vue-router';
 
 import PostUpload from '@modules/posts/components/PostUpload.vue'
 import RatingStars from '@modules/ranking/components/RatingStars.vue'
+import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
 
 const postStore = usePostStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const notificationStore = useNotificationStore(); // INSTANCIAR EL STORE
 
 const dropdownOpen = ref(false); // Estado para controlar la visibilidad del desplegable
+// --- Estados Locales para Notificaciones ---
+const showNotifications = ref(false); // PARA CONTROLAR LA VISIBILIDAD DEL DROPDOWN DE NOTIFICACIONES
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
 };
+
+// --- Funciones de Notificaciones ---
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value;
+  if (showNotifications.value) {
+    // Cargar un máximo de 20 notificaciones para el dropdown
+    notificationStore.fetchNotifications(20);
+  }
+};
+
+const markAllAsRead = async () => {
+  await notificationStore.markAllAsRead();
+  // Después de marcar como leídas, recargamos con el límite del dropdown
+  notificationStore.fetchNotifications(20);
+};
+
 
 // Cierra el desplegable si se hace clic fuera
 const handleClickOutside = (event) => {
@@ -114,6 +163,22 @@ const handleLogout = async () => {
   await authStore.signOut();
   router.push('/login');
 };
+
+// --- Ciclo de Vida ---
+onMounted(async () => {
+  if (authStore.user) {
+    await postStore.fetchPosts();
+    // Iniciar las notificaciones en tiempo real al cargar el feed
+    notificationStore.setupRealtimeNotifications();
+    // Opcional: cargar las notificaciones iniciales para el badge (sin el dropdown abierto)
+    await notificationStore.fetchNotifications(20); // Carga inicial para el contador
+  }
+});
+
+onUnmounted(() => {
+  // Asegúrate de desuscribirte de las notificaciones al salir del Feed
+  notificationStore.unsubscribeRealtimeNotifications();
+});
 
 const isImage = (fileType) => {
   if (!fileType) return false;
@@ -152,6 +217,135 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0,0,0,0.05);
 }
+
+
+/* --- ESTILOS DE NOTIFICACIONES (COPIADOS DE PROFILE.VUE) --- */
+.notification-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notification-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.8em;
+  color: #333;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.notification-icon:hover {
+  background-color: #e0e0e0;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ff4d4f; /* Rojo */
+  color: white;
+  border-radius: 50%;
+  padding: 3px 7px;
+  font-size: 0.7em;
+  font-weight: bold;
+  pointer-events: none; /* Para que no interfiera con el click del icono */
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  max-height: 400px; /* Limita la altura del dropdown */
+  overflow-y: auto; /* Permite scroll si hay muchas notificaciones */
+  z-index: 1000;
+  padding: 10px;
+  margin-top: 10px; /* Separación del botón */
+}
+
+.notifications-dropdown ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notifications-dropdown li {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.notifications-dropdown li:last-child {
+  border-bottom: none;
+}
+
+.notifications-dropdown li.unread {
+  background-color: #e6f7ff; /* Fondo para no leídas */
+  font-weight: 600;
+}
+
+.notifications-dropdown li small {
+  display: block;
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 5px;
+}
+
+.status-message {
+  text-align: center;
+  padding: 15px;
+  color: #666;
+}
+
+.error-message {
+  text-align: center;
+  padding: 15px;
+  color: #d9534f;
+}
+
+.view-all-notifications-button {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  margin: 10px 0;
+  background-color: #f0f2f5;
+  color: #1877f2;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
+  font-size: 0.9em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.view-all-notifications-button:hover {
+  background-color: #e4e6eb;
+}
+
+.mark-read-button {
+  background-color: #007bff; /* Azul primario */
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mark-read-button:hover {
+  background-color: #0056b3;
+}
+/* --- FIN ESTILOS DE NOTIFICACIONES --- */
 
 /* Estilos del encabezado del feed */
 .feed-header {

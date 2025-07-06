@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { supabase } from '@/services/supabase'; // Asegúrate de que esta ruta sea correcta
 import { useAuthStore } from '@modules/auth/stores/auth';// Para obtener el user_id
 import { usePostStore } from '@modules/posts/stores/post'; // Para refrescar los posts después de calificar
+import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
 
 export const useRatingStore = defineStore('rating', {
   state: () => ({
@@ -15,6 +16,7 @@ export const useRatingStore = defineStore('rating', {
       this.error = null;
       const authStore = useAuthStore();
       const postStore = usePostStore(); // Instancia el postStore para refrescar
+      const notificationStore = useNotificationStore(); // Instancia el notificationStore
       const userId = authStore.user?.id;
 
       if (!userId) {
@@ -40,17 +42,54 @@ export const useRatingStore = defineStore('rating', {
           result = await supabase
             .from('ratings')
             .update({ rating: ratingValue, updated_at: new Date().toISOString() })
-            .eq('id', existingRating.id);
+            .eq('id', existingRating.id)
+            .select(); 
           console.log(`Rating updated for post ${postId} by user ${userId} to ${ratingValue}`);
         } else {
           result = await supabase
             .from('ratings')
-            .insert({ user_id: userId, post_id: postId, rating: ratingValue });
-          console.log(`Rating inserted for post ${postId} by user ${userId} with ${ratingValue}`);
+            .insert({ user_id: userId, post_id: postId, rating: ratingValue })
+            .select();
+            console.log(`Rating inserted for post ${postId} by user ${userId} with ${ratingValue}`);
         }
 
         if (result.error) throw result.error;
 
+        // --- Lógica para Notificaciones ---
+        // 1. Obtener el autor del post
+        const { data: postData, error: postFetchError } = await supabase
+          .from('posts')
+          .select('user_id, title') // Selecciona el ID del autor y el título del post
+          .eq('id', postId)
+          .single();
+
+        if (postFetchError) {
+          console.error('Error fetching post author for notification:', postFetchError.message);
+          // Puedes decidir si lanzas un error aquí o simplemente no creas la notificación
+        } else if (postData && postData.user_id !== userId) { // No notificar al propio usuario si califica su post
+          // Obtener el alias del usuario que calificó
+          const { data: raterProfile, error: raterError } = await supabase
+            .from('users')
+            .select('alias')
+            .eq('id', userId)
+            .single();
+
+          const raterAlias = raterProfile?.alias || 'Un usuario';
+          const postTitle = postData.title || 'tu publicación'; // Título del post para el mensaje
+
+          const notificationMessage = `${raterAlias} calificó tu publicación "${postTitle}" con ${ratingValue} estrellas.`;
+
+          // Insertar la notificación
+          await notificationStore.addNotification({
+            user_id: postData.user_id, // El autor del post es el receptor
+            sender_id: userId,          // El usuario que califica es el remitente
+            post_id: postId,
+            type: 'rating',
+            message: notificationMessage,
+          });
+        }
+        // --- Fin Lógica para Notificaciones ---
+        
         // Después de calificar, recargar los posts para que se actualice el promedio
         // y el rating del usuario en el feed.
         await postStore.fetchPosts(); 

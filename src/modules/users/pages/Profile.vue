@@ -23,6 +23,10 @@
             </li>
           </ul>
           <p v-else class="status-message">No hay notificaciones.</p>
+          <router-link to="/notifications" class="view-all-notifications-button">
+            Ver todas las notificaciones ({{ notificationStore.notifications.length }} mostradas)
+          </router-link>
+
           <button v-if="notificationStore.notifications.length > 0 && unreadNotificationsCount > 0" @click="markAllAsRead" class="mark-read-button">
             Marcar todas como leídas
           </button>
@@ -143,14 +147,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'; // Importa onUnmounted
 import { useAuthStore } from '@modules/auth/stores/auth';
 import { usePostStore } from '@modules/posts/stores/post';
 import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
+import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
 
 // --- Stores ---
 const authStore = useAuthStore();
 const postStore = usePostStore();
+const notificationStore = useNotificationStore(); // Instancia el store de notificaciones
 
 // --- Estados Locales para Edición de Perfil ---
 const editableAlias = ref('');
@@ -161,53 +167,6 @@ const avatarFileInput = ref(null); // Ref para el input de archivo oculto
 
 // --- Estados Locales para Notificaciones ---
 const showNotifications = ref(false);
-// Usaremos un store específico para notificaciones (a crear si no existe)
-// Por ahora, lo simularé con un 'mock' si no lo tienes.
-const notificationStore = {
-  notifications: ref([]),
-  loading: ref(false),
-  error: ref(null),
-  async fetchNotifications() {
-    this.loading.value = true;
-    this.error.value = null;
-    try {
-      // Asegúrate de que tu tabla 'notifications' exista en Supabase
-      // y que tenga una columna 'user_id' y 'read'.
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', authStore.user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      this.notifications.value = data;
-    } catch (err) {
-      this.error.value = err.message || 'Error al cargar notificaciones.';
-      console.error('Error fetching notifications:', err.message);
-    } finally {
-      this.loading.value = false;
-    }
-  },
-  async markAllAsRead() {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', authStore.user.id)
-        .eq('read', false); // Solo actualiza las no leídas
-
-      if (error) throw error;
-      await this.fetchNotifications(); // Volver a cargar para actualizar UI
-    } catch (err) {
-      this.error.value = err.message || 'Error al marcar notificaciones como leídas.';
-      console.error('Error marking notifications as read:', err.message);
-    }
-  }
-};
-
-const unreadNotificationsCount = computed(() => {
-  return notificationStore.notifications.value.filter(n => !n.read).length;
-});
 
 // --- Estados Locales para Gestión de Estudiantes (Admin) ---
 const allStudents = ref([]);
@@ -217,48 +176,51 @@ const deleteStudentSuccess = ref(null);
 // --- Propiedades Computadas ---
 const myPosts = computed(() => {
   if (postStore.posts && authStore.user) {
-    // Filtramos las publicaciones del store general por el ID del usuario actual
     return postStore.posts.filter(post => post.user_id === authStore.user.id);
   }
   return [];
 });
 
 // --- Watchers ---
-// Inicializar editableAlias cuando el usuario esté disponible
-watch(() => authStore.user, (newUser) => {
+watch(() => authStore.user, async (newUser) => {
   if (newUser?.alias) {
     editableAlias.value = newUser.alias;
   }
-}, { immediate: true }); // 'immediate: true' para que se ejecute en la carga inicial
+  // Si el usuario cambia o se carga, (re)establece las notificaciones en tiempo real
+  if (newUser?.id) {
+    //await notificationStore.fetchNotifications(); // Carga inicial
+    notificationStore.setupRealtimeNotifications(); // Inicia la suscripción
+    if (newUser.role === 'admin') {
+      await fetchAllStudents();
+    }
+  } else {
+    notificationStore.unsubscribeRealtimeNotifications(); // Limpia la suscripción si no hay usuario
+  }
+}, { immediate: true });
 
 // --- Ciclo de Vida ---
 onMounted(async () => {
-  // Asegurarse de que el perfil del usuario esté completamente cargado
-  // Esto es crucial para que 'alias', 'avatar_url', 'role' estén disponibles
   try {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
       await authStore.fetchUserProfile(currentUser.id);
+      // Aquí, si el usuario está logueado y llegamos a esta página,
+      // podríamos querer cargar las notificaciones con el límite por defecto (para el badge).
+      // Aunque el watcher de `authStore.user` ya lo hace implícitamente al inicializar.
     }
   } catch (err) {
     console.error('Error al obtener usuario actual o perfil en Mount:', err.message);
-    // Podrías redirigir a login si es un error crítico
   }
-
-  // Cargar publicaciones (todas, luego las filtramos con 'myPosts')
-  // Si tienes muchas publicaciones, considera una acción en postStore para 'fetchUserPosts'
   postStore.fetchPosts();
-
-  // Cargar notificaciones
-  if (authStore.user) { // Asegurarse de que hay un usuario logueado
-    await notificationStore.fetchNotifications();
-  }
-
-  // Cargar todos los estudiantes si el usuario es administrador
-  if (authStore.user?.role === 'admin') {
-    await fetchAllStudents();
-  }
 });
+
+
+onUnmounted(() => {
+  // Asegúrate de limpiar la suscripción de Supabase Realtime cuando el componente se desmonte
+  notificationStore.unsubscribeRealtimeNotifications();
+});
+
+
 
 // --- Funciones de Edición de Perfil ---
 const updateProfile = async () => {
@@ -365,14 +327,17 @@ const handleAvatarChange = async (event) => {
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value;
   if (showNotifications.value) {
-    // Si abrimos las notificaciones, las cargamos
-    notificationStore.fetchNotifications();
+    // Cargar un máximo de 20 notificaciones para el dropdown
+    notificationStore.fetchNotifications(20);
   }
 };
 
 const markAllAsRead = async () => {
   await notificationStore.markAllAsRead();
+  // Después de marcar como leídas, recargamos con el límite del dropdown
+  notificationStore.fetchNotifications(20);
 };
+
 
 // --- Funciones de Utilidad de Posts (copiadas de Feed.vue) ---
 const isImage = (fileType) => {
@@ -523,6 +488,110 @@ const deleteStudent = async (studentIdToDelete) => {
 
 <style scoped>
 /* Estilos generales de la página de perfil */
+.notification-area {
+  position: relative;
+  display: inline-block;
+}
+
+.notification-icon {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #555;
+  position: relative;
+  padding: 5px;
+}
+
+.notification-icon:hover {
+  color: #1877f2;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 0px; /* Ajusta según el tamaño del icono y el badge */
+  right: -5px; /* Ajusta según el tamaño del icono y el badge */
+  background-color: #f00; /* Rojo para notificaciones */
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.7em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  min-width: 15px; /* Para que sea un círculo si es un solo dígito */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: 100%; /* Debajo del icono */
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 300px; /* Ancho del menú desplegable */
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 10px;
+}
+
+.notifications-dropdown ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notifications-dropdown li {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.notifications-dropdown li:last-child {
+  border-bottom: none;
+}
+
+.notifications-dropdown li.unread {
+  background-color: #e6f7ff; /* Fondo ligeramente diferente para no leídas */
+  font-weight: bold;
+}
+
+.notifications-dropdown li:hover {
+  background-color: #f5f5f5;
+}
+
+.notifications-dropdown .status-message,
+.notifications-dropdown .error-message {
+  padding: 10px;
+  text-align: center;
+  color: #777;
+}
+
+.notifications-dropdown .error-message {
+  color: #d9534f;
+}
+
+.mark-read-button {
+  width: calc(100% - 20px); /* Ajustar al padding */
+  padding: 8px;
+  margin-top: 10px;
+  background-color: #1877f2;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.mark-read-button:hover {
+  background-color: #155bb5;
+}
 .profile-page {
   max-width: 800px;
   margin: 20px auto;
@@ -744,6 +813,32 @@ const deleteStudent = async (studentIdToDelete) => {
   outline: none;
   border-color: #1877f2;
   box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+/* Añadir o modificar estilos para el botón de "Ver todas las notificaciones" */
+.view-all-notifications-button {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  margin: 10px 0; /* Espacio arriba y abajo */
+  background-color: #f0f2f5;
+  color: #1877f2;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
+  font-size: 0.9em;
+  width: 100%; /* Ocupa todo el ancho disponible */
+  box-sizing: border-box; /* Para incluir padding y border en el ancho */
+}
+
+.view-all-notifications-button:hover {
+  background-color: #e4e6eb;
+}
+
+/* Asegúrate de que .notifications-dropdown tenga un padding interno para que los botones no estén pegados a los bordes */
+.notifications-dropdown {
+  /* ... tus estilos existentes ... */
+  padding: 10px; /* Asegura un padding interno */
 }
 
 .save-profile-button {
