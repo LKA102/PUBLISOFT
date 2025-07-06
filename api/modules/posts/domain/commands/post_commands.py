@@ -2,6 +2,7 @@ from common.command import Command
 from modules.posts.domain.value_objects.vo import CategoryVO
 from modules.posts.domain.entities.post import PostTypeEnum
 
+from fastapi import UploadFile
 from uuid import UUID
 
 
@@ -9,12 +10,12 @@ class CreatePostCommand(Command):
     def __init__(
         self,
         title: str,
-        file_url: str,
+        file: UploadFile,
         category: CategoryVO,
         type: PostTypeEnum,
     ):
         self.title = title
-        self.file_url = file_url
+        self.file = file
         self.category = category
         self.type = type
 

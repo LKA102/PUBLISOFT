@@ -5,6 +5,7 @@ from modules.posts.domain.commands.post_commands import CreatePostCommand
 from modules.posts.domain.commands.post_commands import UpdatePostCommand
 from modules.posts.domain.commands.post_commands import DeletePostCommand
 from modules.posts.domain.commands.post_commands import ScorePostCommand
+from config.settings import supabase_client
 
 
 class PostsCommandHandler:
@@ -16,9 +17,17 @@ class PostsCommandHandler:
             category = CategoryVO(command.category)
             post_type = PostTypeEnum(command.type)
 
+            file_url = supabase_client.storage.from_("posts").upload(
+                path=command.file.filename,
+                file=command.file,
+                file_options={
+                    "upsert": True,
+                },
+            )
+
             post = Post.create(
                 title=command.title,
-                file_url=command.file_url,
+                file_url=file_url,
                 category=category,
                 type=post_type,
             )

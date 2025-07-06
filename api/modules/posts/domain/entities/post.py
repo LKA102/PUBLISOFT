@@ -1,7 +1,8 @@
 from modules.posts.domain.entities.base_entity import BaseEntity
 from modules.posts.domain.value_objects.vo import CategoryVO, ScoreVO
-from modules.posts.domain.events.post_events import ScorePostEvent
-#from modules.posts.domain.events.post_events import PostCreatedEvent
+
+# from modules.posts.domain.events.post_events import ScorePostEvent
+from modules.posts.domain.events.post_events import PostCreatedEvent
 
 from typing import List
 import enum
@@ -150,7 +151,8 @@ class Post(BaseEntity):
             self.__scores
         )
 
-        post_score_event = ScorePostEvent(
-            post_id=self.id, student_id=student_id, score=score
-        )
-        self.events.add(post_score_event)
+        # TODO: uncomment when Notifications aggregate is implemented
+        # post_score_event = ScorePostEvent(
+        #     post_id=self.id, student_id=student_id, score=score
+        # )
+        # self.events.add(post_score_event)

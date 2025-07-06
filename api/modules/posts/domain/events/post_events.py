@@ -7,3 +7,11 @@ class ScorePostEvent(Event):
         self.post_id = post_id
         self.student_id = student_id
         self.score = score
+
+
+class PostCreatedEvent(Event):
+    def __init__(self, post_id: UUID, title: str, category: str, type: str):
+        self.post_id = post_id
+        self.title = title
+        self.category = category
+        self.type = type

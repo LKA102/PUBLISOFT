@@ -85,7 +85,7 @@ def create_post(
     try:
         command = CreatePostCommand(
             title=post.title,
-            file_url=post.file_url,
+            file=post.file,
             category=post.category,
             type=post.type,
         )
