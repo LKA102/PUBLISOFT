@@ -26,3 +26,4 @@ class BaseEntity:
     
     def _update(self):
         self.__updated_at = datetime.now(timezone.utc)
+    

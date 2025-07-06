@@ -1,0 +1,2 @@
+# Clase notificaciones view
+# Metodos

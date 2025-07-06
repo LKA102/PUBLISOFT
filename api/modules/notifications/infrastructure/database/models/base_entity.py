@@ -1,0 +1,27 @@
+from modules.notifications.domain.entities.base_entity import BaseEntity
+from sqlalchemy import Column, DateTime
+from sqlalchemy.dialects.postgresql import INTEGER
+import uuid
+
+class BaseEntitySQLAlchemy:
+    """
+    Base class for all entities in the application.
+    This class provides a common interface for all entities.
+    It can be extended by other entity classes to add common functionality.
+    """
+
+    id = Column(INTEGER, primary_key=True, autoincrement=True)
+    fecha_creacion = Column(DateTime, nullable=False)
+
+    @staticmethod
+    def base_entity_to_orm(entity: BaseEntity, entity_orm: 'BaseEntitySQLAlchemy'):
+        if entity.id is not None:
+            entity_orm.id = entity.id
+        entity_orm.fecha_creacion = entity.fecha_creacion
+
+    @staticmethod
+    def orm_to_base_entity(entity_orm):
+        return {
+            'id': getattr(entity_orm, 'id', None),
+            'fecha_creacion': getattr(entity_orm, 'fecha_creacion', None)
+        }
