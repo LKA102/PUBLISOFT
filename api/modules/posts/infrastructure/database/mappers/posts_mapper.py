@@ -16,8 +16,21 @@ class PostsMapper:
         type = PostTypeEnum(post_orm.type)
 
         scores = []
-        for score in post_orm.scores:
-            scores.append(ScoreVO(score))
+        for score_data in post_orm.scores:
+            if (
+                isinstance(score_data, dict)
+                and "student_id" in score_data
+                and "score" in score_data
+            ):
+                scores.append(
+                    ScoreVO(
+                        student_id=UUID(score_data["student_id"]),
+                        score=score_data["score"],
+                    )
+                )
+            elif isinstance(score_data, int):
+                # Handle legacy/broken data that only has score values
+                continue
 
         return Post(
             title=post_orm.title,
@@ -35,7 +48,9 @@ class PostsMapper:
     def to_orm(post: Post) -> PostSQLAlchemy:
         scores = []
         for score in post.scores:
-            scores.append(score.score)
+            scores.append(
+                {"student_id": str(score.student_id), "score": score.score}
+            )
 
         post_orm = PostSQLAlchemy()
         post_orm.title = post.title

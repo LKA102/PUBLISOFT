@@ -29,12 +29,32 @@ from uuid import UUID
 router = APIRouter()
 
 
-@router.get("/posts")
+@router.get("/all")
 def get_posts(uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work)):
     posts = uok.posts_repository.load_all()
+
+    # Convert Post entities to PostResponse objects for JSON serialization
+    post_responses = []
+    for post in posts:
+        post_response = PostResponse(
+            id=str(post.id),
+            title=post.title,
+            file_url=post.file_url,
+            original_filename=post.original_filename,
+            category=str(post.category),
+            type=post.type.value,
+            score_avg=post.score_avg,
+            author_id=str(post.author_id),
+            created_at=post.created_at.isoformat() if post.created_at else None,
+            updated_at=post.updated_at.isoformat() if post.updated_at else None,
+        )
+        post_responses.append(post_response)
+
+    print(post_responses)
+
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content=posts,
+        content=[post_response.dict() for post_response in post_responses],
     )
 
 
@@ -65,16 +85,16 @@ def get_post(
         )
 
     return PostResponse(
-        id=post.id,
+        id=str(post.id),
         title=post.title,
         file_url=post.file_url,
         original_filename=post.original_filename,
         category=str(post.category),
         type=post.type.value,
         score_avg=post.score_avg,
-        author_id=post.author_id,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
+        author_id=str(post.author_id),
+        created_at=post.created_at.isoformat() if post.created_at else None,
+        updated_at=post.updated_at.isoformat() if post.updated_at else None,
     )
 
 
@@ -103,16 +123,24 @@ def create_post(
         return CreatePostResponse(
             message="Post created successfully",
             post=PostResponse(
-                id=created_post.id,
+                id=str(created_post.id),
                 title=created_post.title,
                 file_url=created_post.file_url,
                 original_filename=created_post.original_filename,
                 category=str(created_post.category),
                 type=created_post.type.value,
                 score_avg=created_post.score_avg,
-                author_id=created_post.author_id,
-                created_at=created_post.created_at,
-                updated_at=created_post.updated_at,
+                author_id=str(created_post.author_id),
+                created_at=(
+                    created_post.created_at.isoformat()
+                    if created_post.created_at
+                    else None
+                ),
+                updated_at=(
+                    created_post.updated_at.isoformat()
+                    if created_post.updated_at
+                    else None
+                ),
             ),
         )
     except APIHTTPException as e:
@@ -152,16 +180,24 @@ def update_post(
         return UpdatePostResponse(
             message="Post updated successfully",
             post=PostResponse(
-                id=updated_post.id,
+                id=str(updated_post.id),
                 title=updated_post.title,
                 file_url=updated_post.file_url,
                 original_filename=updated_post.original_filename,
                 category=str(updated_post.category),
                 type=updated_post.type.value,
                 score_avg=updated_post.score_avg,
-                author_id=updated_post.author_id,
-                created_at=updated_post.created_at,
-                updated_at=updated_post.updated_at,
+                author_id=str(updated_post.author_id),
+                created_at=(
+                    updated_post.created_at.isoformat()
+                    if updated_post.created_at
+                    else None
+                ),
+                updated_at=(
+                    updated_post.updated_at.isoformat()
+                    if updated_post.updated_at
+                    else None
+                ),
             ),
         )
     except APIHTTPException as e:

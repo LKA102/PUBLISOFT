@@ -6,7 +6,9 @@ from modules.posts.infrastructure.database.mappers.posts_mapper import (
     PostsMapper,
 )
 from modules.posts.infrastructure.database.models.posts import PostSQLAlchemy
-
+from modules.posts.infrastructure.database.models.base_entity import (
+    BaseEntitySQLAlchemy,
+)
 from uuid import UUID
 from typing import List, Optional
 
@@ -47,7 +49,7 @@ class PostsRepositorySQLAlchemy(IPostRepository):
             existing_post_orm.scores = post_orm.scores
             existing_post_orm.score_avg = post_orm.score_avg
             existing_post_orm.author_id = post_orm.author_id
-            PostsMapper.base_entity_to_orm(post, existing_post_orm)
+            BaseEntitySQLAlchemy.base_entity_to_orm(post, existing_post_orm)
             return PostsMapper.to_entity(existing_post_orm)
         else:
             return None
