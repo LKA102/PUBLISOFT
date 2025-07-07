@@ -13,11 +13,13 @@ class CreatePostCommand(Command):
         file: UploadFile,
         category: CategoryVO,
         type: PostTypeEnum,
+        author_id: UUID,
     ):
         self.title = title
         self.file = file
         self.category = category
         self.type = type
+        self.author_id = author_id
 
 
 class UpdatePostCommand(Command):

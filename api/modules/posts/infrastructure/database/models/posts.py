@@ -5,7 +5,7 @@ from modules.auth.infrastructure.database.models.base_entity import (
 )
 
 from sqlalchemy import Column, String, Float
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 
 class PostSQLAlchemy(Base, BaseEntitySQLAlchemy):
@@ -19,3 +19,4 @@ class PostSQLAlchemy(Base, BaseEntitySQLAlchemy):
     type = Column(String, nullable=False)
     scores = Column(JSONB, nullable=False, default=list)
     score_avg = Column(Float, nullable=False)
+    author_id = Column(UUID(as_uuid=True), nullable=False)
