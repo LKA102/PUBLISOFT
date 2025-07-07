@@ -578,6 +578,36 @@ const changePage = async (page) => {
     opacity: 1; /* Se hace visible al hacer hover */
 }
 
+/* Sección de acción de descarga */
+.file-download-action {
+  text-align: center;
+  margin-top: 20px; /* Espacio superior para separarlo de la previsualización */
+  padding-top: 15px; /* Padding superior para el botón */
+  border-top: 1px solid #eee; /* Línea divisoria */
+}
+
+.download-button {
+  display: inline-flex; /* Permite icono y texto en línea */
+  align-items: center; /* Alinea verticalmente icono y texto */
+  padding: 10px 20px;
+  background-color: #28a745; /* Un verde para el botón de descarga */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  text-decoration: none; /* Elimina el subrayado del enlace */
+  transition: background-color 0.2s ease;
+}
+
+.download-button i {
+  margin-right: 8px; /* Espacio entre el icono y el texto */
+}
+
+.download-button:hover {
+  background-color: #218838; /* Verde más oscuro al pasar el ratón */
+}
+
 .file-link-overlay i {
     margin-bottom: 8px; /* Espacio entre el icono y el texto */
     font-size: 1.5em; /* Tamaño del icono */
