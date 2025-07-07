@@ -5,79 +5,83 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    redirect: '/feed' // Redirige al feed por defecto
+    redirect: '/feed', // Redirige al feed por defecto
+    children: [
+        {
+        path: '/login',
+        name: 'Login',
+        component: () => import('@/modules/auth/pages/Login.vue'),
+        meta: { public: true }
+      },
+      {
+        path: '/register',
+        name: 'Register',
+        component: () => import('@/modules/auth/pages/Register.vue'),
+        meta: { public: true }
+      },
+      {
+        path: '/feed',
+        name: 'Feed',
+        component: () => import('@/modules/users/pages/Feed.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/resources',
+        name: 'Resources',
+        component: () => import('@/modules/users/pages/Resources.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/myposts',
+        name: 'MyPublications',
+        component: () => import('@/modules/posts/pages/MyPublications.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('@/modules/users/pages/Profile.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/notifications',
+        name: 'Notifications',
+        component: () => import('@/modules/notifications/pages/Notifications.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/ranking',
+        name: 'Ranking',
+        component: () => import('@/modules/ranking/pages/Ranking.vue'), // Ruta corregida si usas @/
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/users/:userId',
+        name: 'UserProfile',
+        component: () => import('@/modules/users/pages/UserProfileView.vue'),
+        meta: { requiresAuth: true }
+      },
+      // NUEVA RUTA PARA EL DASHBOARD DE ADMINISTRADOR
+      {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: () => import('@/modules/admi/pages/Dashboard.vue'),
+        meta: { requiresAuth: true } // Requiere autenticación Y rol de admin
+      },
+      {
+      path: '/rate-mandatory', // ¡NUEVA RUTA para la valoración obligatoria!
+      name: 'RateMandatory',
+      // IMPORTANTE: Asegúrate que esta ruta al componente es la correcta en tu proyecto.
+      // Si RateMandatoryPage.vue está en `src/components`, úsala. Si está en `src/views`, úsala.
+      component: () => import('@/components/RateMandatoryPage.vue'), 
+      meta: { requiresAuth: true, requiresStudentRating: true } // Marca esta ruta como requerimiento de estudiante
+    },
+    // Captura cualquier ruta no definida y redirige a Home
+    { path: '/:pathMatch(.*)*', redirect: '/' } 
+    ]
   },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/modules/auth/pages/Login.vue'),
-    meta: { public: true }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/modules/auth/pages/Register.vue'),
-    meta: { public: true }
-  },
-  {
-    path: '/feed',
-    name: 'Feed',
-    component: () => import('@/modules/users/pages/Feed.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/resources',
-    name: 'Resources',
-    component: () => import('@/modules/users/pages/Resources.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/myposts',
-    name: 'MyPublications',
-    component: () => import('@/modules/posts/pages/MyPublications.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/modules/users/pages/Profile.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/notifications',
-    name: 'Notifications',
-    component: () => import('@/modules/notifications/pages/Notifications.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/ranking',
-    name: 'Ranking',
-    component: () => import('@/modules/ranking/pages/Ranking.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/users/:userId',
-    name: 'UserProfile',
-    component: () => import('@/modules/users/pages/UserProfileView.vue'),
-    meta: { requiresAuth: true }
-  },
-  // RUTA PARA EL DASHBOARD DE ADMINISTRADOR
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('@/modules/admi/pages/Dashboard.vue'),
-    meta: { requiresAuth: true, requiresRole: 'admin' } // Requiere autenticación Y rol de admin
-  },
-  {
-    path: '/rate-mandatory', // ¡NUEVA RUTA para la valoración obligatoria!
-    name: 'RateMandatory',
-    // IMPORTANTE: Asegúrate que esta ruta al componente es la correcta en tu proyecto.
-    // Si RateMandatoryPage.vue está en `src/components`, úsala. Si está en `src/views`, úsala.
-    component: () => import('@/components/RateMandatoryPage.vue'), 
-    meta: { requiresAuth: true, requiresStudentRating: true } // Marca esta ruta como requerimiento de estudiante
-  },
-  // Captura cualquier ruta no definida y redirige a Home
-  { path: '/:pathMatch(.*)*', redirect: '/' } 
+
+  
 ]
 
 const router = createRouter({
