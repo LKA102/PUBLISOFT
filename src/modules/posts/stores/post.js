@@ -1,16 +1,22 @@
 // src/stores/post.js
 import { defineStore } from 'pinia';
 import { supabase } from '@/services/supabase';
-import { useAuthStore } from '@modules/auth/stores/auth'; // Necesitamos el usuario actual
+import { useAuthStore } from '@/modules/auth/stores/auth';
 
 export const usePostStore = defineStore('post', {
   state: () => ({
     posts: [],
     loading: false,
     error: null,
-    allCoursesByCycleData: [],
-    courses: [], // Nuevo estado para almacenar cursos únicos
-    cycles: [],  // Nuevo estado para almacenar ciclos únicos
+    total: 0,
+    currentPage: 1,
+    itemsPerPage: 5,
+    filters: {
+      searchTerm: '',
+      course: '',
+      cycle: '',
+      authorRole: '' // Nuevo filtro para el rol
+    }
   }),
 
   actions: {
@@ -111,101 +117,68 @@ export const usePostStore = defineStore('post', {
       }
     },
 
-    async fetchPosts(filters = {}) {
+    async fetchPosts(options = {}) {
       this.loading = true;
       this.error = null;
-      // Obtener el ID del usuario actual para saber su calificación
-      const authStore = useAuthStore();
-      const currentUserId = authStore.user?.id;
+      
+      const {
+        page = 1,
+        reset = true,
+        searchTerm = this.filters.searchTerm,
+        course = this.filters.course,
+        cycle = this.filters.cycle,
+        authorRole = this.filters.authorRole // Nuevo parámetro
+      } = options;
 
       try {
-        let query = supabase
-          .from('posts')
-          .select(`
-            *,
-            users (alias, email, avatar_url, role),
-            ratings (rating, user_id)
-          `);
+        const offset = (page - 1) * this.itemsPerPage;
+        const currentUserId = useAuthStore().user?.id || null;
 
-        // Aplicar filtro de búsqueda por texto
-        if (filters.searchTerm) {
-          const searchTerm = `%${filters.searchTerm.toLowerCase()}%`;
-          query = query.or(`title.ilike.${searchTerm},course.ilike.${searchTerm},cycle.ilike.${searchTerm}`);
-        }
-
-        // Aplicar filtro por curso
-        if (filters.course) {
-          query = query.eq('course', filters.course);
-        }
-
-        // Aplicar filtro por ciclo
-        if (filters.cycle) {
-          query = query.eq('cycle', filters.cycle);
-        }
-
-             // **********************************************
-        // *** NUEVA LÓGICA CLAVE: Filtrar por rol del autor ***
-        // **********************************************
-        if (filters.authorRole) {
-          // Si queremos filtrar por 'role' de la tabla 'users' que está unida.
-          // Supabase's `select` con joins como `users(role)` permite filtrar,
-          // pero el `.eq` directo sobre la columna anidada es más reciente o requiere sintaxis específica.
-          // La forma más robusta es obtener los IDs de los usuarios con ese rol primero y luego filtrar por `user_id`.
-          
-          const { data: usersWithRole, error: usersError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('role', filters.authorRole); // Aquí filtramos en la tabla 'users' directamente
-
-          if (usersError) {
-            console.error('Error al obtener IDs de usuarios por rol:', usersError.message);
-            throw usersError;
-          }
-
-          const userIdsWithRole = usersWithRole.map(user => user.id);
-          
-          if (userIdsWithRole.length > 0) {
-            query = query.in('user_id', userIdsWithRole); // Filtra los posts por esos IDs
-          } else {
-            // Si no hay usuarios con ese rol, no debería mostrar posts, 
-            // así que forzamos un resultado vacío para evitar cargar todos los posts.
-            this.posts = [];
-            this.loading = false;
-            return; 
-          }
-        }
-        // **********************************************
-
-        query = query.order('created_at', { ascending: false });
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc('get_posts_with_ratings_paginated', {
+          p_user_id: currentUserId,
+          p_limit: this.itemsPerPage,
+          p_offset: offset,
+          p_search_term: searchTerm || null,
+          p_course: course || null,
+          p_cycle: cycle || null,
+          p_author_role: authorRole || null // Nuevo parámetro
+        });
 
         if (error) throw error;
 
-        this.posts = data.map(post => {
-          // Calcular el promedio de ratings para cada post
-          const totalRating = post.ratings.reduce((sum, r) => sum + r.rating, 0);
-          const averageRating = post.ratings.length > 0 ? totalRating / post.ratings.length : 0;
-
-          // Encontrar la calificación del usuario actual para este post
-          // Busca en `post.ratings` si hay una calificación de `currentUserId`
-          const currentUserRating = post.ratings.find(
-            rating => rating.user_id === currentUserId
-          );
-          
-          return {
-            ...post,
-            average_rating: averageRating,
-            user_rating: currentUserRating ? currentUserRating.rating : 0 // ¡AQUÍ ESTÁ LA CORRECCIÓN!
-          };
-        });
+        this.posts = data.posts || [];
+        this.total = data.total || 0;
+        this.currentPage = page;
+        this.filters = { searchTerm, course, cycle, authorRole };
 
       } catch (err) {
         this.error = err.message;
-        console.error('Error fetching posts:', err.message);
+        console.error('Error fetching posts:', err);
       } finally {
         this.loading = false;
       }
+    },
+
+    async applyFilters(filters = {}) {
+      return this.fetchPosts({
+        ...filters,
+        reset: true
+      });
+    },
+
+    async loadMorePosts() {
+      if (this.posts.length >= this.total) return;
+      return this.fetchPosts({
+        page: this.currentPage + 1
+      });
+    },
+
+    async clearFilters() {
+      return this.applyFilters({
+        searchTerm: '',
+        course: '',
+        cycle: ''
+      });
     },
 
     async fetchAllCoursesByCycleData() {
