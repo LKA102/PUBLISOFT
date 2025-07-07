@@ -58,7 +58,7 @@
         />
             <div class="post-info">
               <span class="post-author">
-                {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
+                {{ post.alias || post.email || 'Usuario Desconocido' }}
               </span>
               <span class="post-date">
                 {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
