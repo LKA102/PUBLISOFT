@@ -156,7 +156,14 @@ const clearFilters = async () => {
   searchTerm.value = '';
   selectedCourse.value = '';
   selectedCycle.value = '';
-  await postStore.fetchPosts({ reset: true });
+  
+  // Forzar una recarga completa con filtros null
+  await postStore.fetchPosts({
+    searchTerm: null,
+    course: null,
+    cycle: null,
+    reset: true
+  });
 };
 
 // Carga más posts al hacer scroll (scroll infinito)
