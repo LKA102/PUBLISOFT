@@ -20,9 +20,6 @@
           </router-link>
         </li>
         <li v-if="authStore.isAdmin">
-        <router-link to="/dashboard" active-class="active-link">
-          <i class="fas fa-tools"></i> <span>Panel Admin</span>
-        </router-link>
       </li>
       </ul>
     </nav>
@@ -41,7 +38,8 @@ const navItems = [
   { path: '/feed', label: 'Inicio', icon: 'fas fa-home' },
   { path: '/notifications', label: 'Notificaciones', icon: 'fas fa-bell' },
   { path: '/ranking', label: 'Ranking', icon: 'fas fa-trophy' },
-  { path: '/resources', label: 'Recursos académicos', icon: 'fas fa-book' }
+  { path: '/resources', label: 'Recursos académicos', icon: 'fas fa-book' },
+  { path: '/dashboard', label: 'Panel admin', icon: 'fas fa-tools' }
 ];
 
 const isActive = (path) => {

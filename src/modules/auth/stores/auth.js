@@ -112,13 +112,28 @@ export const useAuthStore = defineStore('auth', {
         this.loading = true;
         this.error = null;
         try {
+            const { data: verificationData, error: verificationError } = await supabase
+                .from('verifications')
+                .select('*')
+                .eq('email', email)
+                .eq('code', code)
+                .eq('valid', true)
+                .single();
+
+            if (verificationError || !verificationData) {
+                throw new Error('No encontramos tus datos en la base de datos de la Facultad. Verifica tu correo institucional y código.');
+            }
+
             const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
-                password,
+              email,
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/login`,
+              },
             });
 
             if (authError) {
-                throw new Error(`AuthStore: Error al registrar en Supabase Auth: ${authError.message}`);
+                throw new Error(`Error al registrar en Supabase Auth: ${authError.message}`);
             }
 
             if (authData.user) {
@@ -129,15 +144,14 @@ export const useAuthStore = defineStore('auth', {
                         email: authData.user.email,
                         role: role,
                         alias: alias,
-                        avatar_url: " ", 
+                        avatar_url: " ",
                     }])
                     .select()
                     .single();
 
                 if (userError) {
-                    throw new Error(`AuthStore: Error al insertar en la tabla 'users': ${userError.message}`);
+                    throw new Error(`Error al insertar en la tabla 'users': ${userError.message}`);
                 }
-                console.log('AuthStore: register - Insertado en tabla users:', userData);
 
                 await this.setUser(authData.user);
 
@@ -145,15 +159,14 @@ export const useAuthStore = defineStore('auth', {
                     const { error: studentError } = await supabase
                         .from('students')
                         .insert([{ user_id: authData.user.id, code: code }]);
-                    if (studentError) throw new Error(`AuthStore: Error al insertar en 'students': ${studentError.message}`);
-                    console.log('AuthStore: register - Insertado en tabla students.');
+                    if (studentError) throw new Error(`Error al insertar en 'students': ${studentError.message}`);
                 } else if (role === 'admin') {
                     const { error: adminError } = await supabase
                         .from('admins')
                         .insert([{ user_id: authData.user.id }]);
-                    if (adminError) throw new Error(`AuthStore: Error al insertar en 'admins': ${adminError.message}`);
-                    console.log('AuthStore: register - Insertado en tabla admins.');
+                    if (adminError) throw new Error(`Error al insertar en 'admins': ${adminError.message}`);
                 }
+
                 return { success: true };
             }
 

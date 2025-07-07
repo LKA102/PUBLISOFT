@@ -42,20 +42,34 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@modules/auth/stores/auth';
-import { storeToRefs } from 'pinia'; // Importa storeToRefs para acceder a propiedades reactivas del store
+import { storeToRefs } from 'pinia';
 
 const email = ref('');
 const password = ref('');
-const code = ref('');       // Para el código de alumno
-const alias = ref('');      // NUEVO: ref para el alias/nombre de usuario
+const code = ref('');
+const alias = ref('');
 
+const router = useRouter();
 const authStore = useAuthStore();
-const { loading, error } = storeToRefs(authStore); // Accede a loading y error del store
+const { loading, error } = storeToRefs(authStore);
 
 const handleRegister = async () => {
-  // Asegúrate de que los parámetros coincidan con la acción 'register' en tu store
-  // Enviamos email, code, password, y AHORA también alias
-  await authStore.register(email.value, code.value, alias.value, password.value);
+  const result = await authStore.register(
+    email.value,
+    code.value,
+    alias.value,
+    password.value,
+    'student' // por defecto
+  );
+
+  if (result.success) {
+    alert('✅ Registro exitoso. Revisa tu correo institucional para confirmar tu cuenta.');
+    router.push('/login');
+  } else {
+    // el error ya está asignado en `authStore.error`, pero puedes usar también:
+    console.error('Registro fallido:', result.error);
+  }
 };
 </script>
