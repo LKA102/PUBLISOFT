@@ -43,15 +43,14 @@
         <div class="post-header">
           <router-link :to="`/users/${post.user_id}`" class="post-author-link">
           <img
-            :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
+            :src="post.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
             alt="Avatar del autor"
             class="post-avatar"
           />
            </router-link>
           <div class="post-info">
             <span class="post-author">
-              {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
-              <span v-if="post.users?.role === 'admin'" class="admin-badge">Admin</span>
+              {{ post.alias || post.email || 'Usuario Desconocido' }}
             </span>
             <span class="post-date">
               {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
@@ -77,14 +76,29 @@
           </template>
         </div>
 
-          <RatingStars
-            :post-id="post.id"
-            :initial-average-rating="post.average_rating"
-            :initial-user-rating="post.user_rating"
-          />
+         <RatingStars
+          :post-id="post.id"
+          :initial-average-rating="post.average_rating"
+          :initial-user-rating="post.user_rating"
+        />
 
       </div>
     </div>
+    <div class="pagination-bar" v-if="totalPages > 1">
+      <button 
+        v-for="page in totalPages" 
+        :key="page" 
+        :class="{ 'active-page': page === postStore.currentPage }" 
+        @click="changePage(page)"
+        :disabled="page === postStore.currentPage"
+      >
+        {{ page }}
+      </button>
+    </div>
+
+    <p class="page-status">
+      Mostrando {{ postStore.posts.length }} de {{ postStore.total }} publicaciones
+    </p>
   </div>
 </template>
 
@@ -140,34 +154,86 @@ const isPdf = (fileType) => {
 
 // --- Ciclo de Vida ---
 onMounted(async () => {
-  // Asegurarse de que el usuario está autenticado antes de intentar cargar posts
   if (authStore.user) {
-    await postStore.fetchUniqueCourses(); // Cargar cursos únicos
-    await postStore.fetchUniqueCycles();   // Cargar ciclos únicos
-    applyFilters(); // Cargar las publicaciones iniciales con el filtro de admin
-  } else {
-    // Si no está autenticado, redirigir al login (aunque el router guard debería manejar esto)
-    router.push('/login');
+    try {
+      await authStore.fetchUserProfile(authStore.user.id);
+      await Promise.all([
+        postStore.fetchUniqueCourses(),
+        postStore.fetchUniqueCycles()
+      ]);
+      
+      // Carga inicial solo para estudiantes
+      await postStore.fetchPosts({
+        authorRole: 'admin', // <-- Filtro específico
+        reset: true
+      });
+      
+      notificationStore.setupRealtimeNotifications();
+    } catch (error) {
+      console.error('Initialization error:', error);
+    }
   }
 });
 
-// onUnmounted para limpiar listeners, si hubiera
-// Aquí no hay listeners específicos de DOM como en el Feed original
-// pero si tuvieras suscripciones en tiempo real para recursos, irían aquí.
-// Por ahora, asumimos que no hay necesidad específica de onUnmounted en Resources.vue
+const changePage = async (page) => {
+  await postStore.fetchPosts({
+    page,
+    searchTerm: searchTerm.value,
+    course: selectedCourse.value,
+    cycle: selectedCycle.value,
+    reset: true
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 </script>
 
 <style scoped>
-/*
-  IMPORTANTE:
-  Los estilos que tenías en Feed.vue son bastante genéricos para el feed.
-  Puedes copiarlos directamente aquí o, mejor aún, si son estilos compartidos
-  entre Feed.vue y Resources.vue, deberías moverlos a un archivo CSS global
-  (ej. src/assets/css/post-styles.css) e importarlo en ambos componentes,
-  o en tu App.vue si son estilos muy generales.
+/* --- ESTILOS PARA PAGINACIÓN --- */
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 25px 0;
+  flex-wrap: wrap;
+}
 
-  Por ahora, los pego directamente.
-*/
+.pagination-bar button {
+  padding: 8px 12px;
+  min-width: 36px;
+  background-color: #f0f2f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95em;
+}
+
+.pagination-bar button:hover {
+  background-color: #e4e6eb;
+  border-color: #ccc;
+}
+
+.pagination-bar button.active-page {
+  background-color: #1877f2;
+  color: white;
+  border-color: #1877f2;
+  font-weight: bold;
+}
+
+.page-status {
+  text-align: center;
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+.pagination-bar button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #1877f2;
+  color: white;
+}
 
 /* Estilos generales del contenedor principal */
 .feed-page {

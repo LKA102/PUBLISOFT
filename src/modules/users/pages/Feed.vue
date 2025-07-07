@@ -225,8 +225,11 @@ onMounted(async () => {
         postStore.fetchUniqueCycles()
       ]);
       
-      // Carga inicial sin parámetros
-      await postStore.fetchPosts();
+      // Carga inicial solo para estudiantes
+      await postStore.fetchPosts({
+        authorRole: 'student', // <-- Filtro específico
+        reset: true
+      });
       
       notificationStore.setupRealtimeNotifications();
     } catch (error) {

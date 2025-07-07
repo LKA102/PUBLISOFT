@@ -14,7 +14,8 @@ export const usePostStore = defineStore('post', {
     filters: {
       searchTerm: '',
       course: '',
-      cycle: ''
+      cycle: '',
+      authorRole: '' // Nuevo filtro para el rol
     }
   }),
 
@@ -102,9 +103,6 @@ export const usePostStore = defineStore('post', {
     },
 
     async fetchPosts(options = {}) {
-      // Evita múltiples llamadas simultáneas
-      if (this.loading) return;
-      
       this.loading = true;
       this.error = null;
       
@@ -113,7 +111,8 @@ export const usePostStore = defineStore('post', {
         reset = true,
         searchTerm = this.filters.searchTerm,
         course = this.filters.course,
-        cycle = this.filters.cycle
+        cycle = this.filters.cycle,
+        authorRole = this.filters.authorRole // Nuevo parámetro
       } = options;
 
       try {
@@ -126,88 +125,20 @@ export const usePostStore = defineStore('post', {
           p_offset: offset,
           p_search_term: searchTerm || null,
           p_course: course || null,
-          p_cycle: cycle || null
+          p_cycle: cycle || null,
+          p_author_role: authorRole || null // Nuevo parámetro
         });
-
-
-        //  // Aplicar filtro de búsqueda por texto
-        // if (filters.searchTerm) {
-        //   const searchTerm = `%${filters.searchTerm.toLowerCase()}%`;
-        //   query = query.or(`title.ilike.${searchTerm},course.ilike.${searchTerm},cycle.ilike.${searchTerm}`);
-        // }
-
-        // // Aplicar filtro por curso
-        // if (filters.course) {
-        //   query = query.eq('course', filters.course);
-        // }
-
-        // // Aplicar filtro por ciclo
-        // if (filters.cycle) {
-        //   query = query.eq('cycle', filters.cycle);
-        // }
-
-        //      // **********************************************
-        // // *** NUEVA LÓGICA CLAVE: Filtrar por rol del autor ***
-        // // **********************************************
-        // if (filters.authorRole) {
-        //   // Si queremos filtrar por 'role' de la tabla 'users' que está unida.
-        //   // Supabase's `select` con joins como `users(role)` permite filtrar,
-        //   // pero el `.eq` directo sobre la columna anidada es más reciente o requiere sintaxis específica.
-        //   // La forma más robusta es obtener los IDs de los usuarios con ese rol primero y luego filtrar por `user_id`.
-          
-        //   const { data: usersWithRole, error: usersError } = await supabase
-        //     .from('users')
-        //     .select('id')
-        //     .eq('role', filters.authorRole); // Aquí filtramos en la tabla 'users' directamente
-
-        //   if (usersError) {
-        //     console.error('Error al obtener IDs de usuarios por rol:', usersError.message);
-        //     throw usersError;
-        //   }
-
-        //   const userIdsWithRole = usersWithRole.map(user => user.id);
-          
-        //   if (userIdsWithRole.length > 0) {
-        //     query = query.in('user_id', userIdsWithRole); // Filtra los posts por esos IDs
-        //   } else {
-        //     // Si no hay usuarios con ese rol, no debería mostrar posts, 
-        //     // así que forzamos un resultado vacío para evitar cargar todos los posts.
-        //     this.posts = [];
-        //     this.loading = false;
-        //     return; 
-        //   }
-        // }
-        // // **********************************************
-
-        // query = query.order('created_at', { ascending: false });
-
-        // const { data, error } = await query;
 
         if (error) throw error;
 
-        if (reset) {
-          // Solo resetea si se solicita explícitamente
-          this.posts = data.posts || [];
-        } else {
-          // Para scroll infinito, concatena los resultados
-          this.posts = [...this.posts, ...(data.posts || [])];
-        }
-        
+        this.posts = data.posts || [];
         this.total = data.total || 0;
         this.currentPage = page;
-        this.filters = { searchTerm, course, cycle };
-
-        console.log('Posts loaded:', {
-          posts: this.posts,
-          total: this.total,
-          filters: this.filters
-        });
+        this.filters = { searchTerm, course, cycle, authorRole };
 
       } catch (err) {
         this.error = err.message;
         console.error('Error fetching posts:', err);
-        this.posts = [];
-        this.total = 0;
       } finally {
         this.loading = false;
       }
