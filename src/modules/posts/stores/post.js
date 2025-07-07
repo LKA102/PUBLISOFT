@@ -14,10 +14,10 @@ export const usePostStore = defineStore('post', {
   }),
 
   actions: {
-    async uploadPost(postData, file) {
+     async uploadPost(postData, file) { // postData now includes thumbnail_url
       this.loading = true;
       this.error = null;
-      const authStore = useAuthStore();
+      const authStore = useAuthStore(); // Get the auth store instance here
 
       if (!authStore.user) {
         this.error = 'Debes iniciar sesión para publicar.';
@@ -27,30 +27,44 @@ export const usePostStore = defineStore('post', {
       }
 
       const userId = authStore.user.id;
-      const bucketName = 'publications'; // ¡Asegúrate que este sea el nombre de tu bucket!
+      const mainBucketName = 'publications'; // Your main files bucket
+      // The thumbnail is already uploaded and its URL passed in postData.thumbnail_url
+      // So, we don't upload the thumbnail here again.
+
+      let fileUrl = null;
+      let fileType = null;
 
       try {
-        // 1. Subir el archivo a Supabase Storage
-        const fileExtension = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-        const filePath = `${userId}/${fileName}`;
+        // 1. Subir el archivo principal a Supabase Storage (publications bucket)
+        if (file) { // Ensure there is a file to upload
+          const fileExtension = file.name.split('.').pop();
+          // Generate a more robust unique file name for the main file
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+          const filePath = `${userId}/${fileName}`;
 
-        console.log(`Subiendo archivo a: ${bucketName}/${filePath}`);
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(filePath, file);
+          console.log(`Subiendo archivo principal a: ${mainBucketName}/${filePath}`);
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from(mainBucketName) // Using 'publications' bucket for main files
+            .upload(filePath, file);
 
-        if (uploadError) {
-          throw new Error(`Error al subir el archivo: ${uploadError.message}`);
+          if (uploadError) {
+            throw new Error(`Error al subir el archivo principal: ${uploadError.message}`);
+          }
+          console.log('Archivo principal subido con éxito:', uploadData);
+
+          const { data: publicUrlData } = supabase.storage
+            .from(mainBucketName) // Using 'publications' bucket for main files
+            .getPublicUrl(filePath);
+          
+          fileUrl = publicUrlData.publicUrl;
+          fileType = fileExtension; // Store the original file type
+          console.log('--- URL GENERADA PARA EL ARCHIVO PRINCIPAL ---:', fileUrl);
+        } else {
+            // If for some reason there's no file, handle it or throw an error
+            // Based on your PostUpload.vue, `selectedFile` is `required`, so this path might not be hit often.
+            console.warn('No main file selected for upload.');
         }
-        console.log('Archivo subido con éxito:', uploadData);
 
-        const { data: publicUrlData } = supabase.storage
-          .from(bucketName)
-          .getPublicUrl(filePath);
-        
-        const fileUrl = publicUrlData.publicUrl;
-        console.log('--- URL GENERADA PARA EL ARCHIVO ---:', fileUrl);
 
         // 2. Insertar la publicación en la tabla 'posts'
         console.log('Insertando publicación en la base de datos...');
@@ -61,8 +75,9 @@ export const usePostStore = defineStore('post', {
             title: postData.title,
             course: postData.course,
             cycle: postData.cycle,
-            file_url: fileUrl,
-            file_type: fileExtension,
+            file_url: fileUrl, // URL del archivo principal
+            file_type: fileType, // Tipo del archivo principal
+            thumbnail_url: postData.thumbnail_url || null, // <--- ESTO ES CLAVE: la URL de la miniatura viene de postData
           })
           .select(`
             *,

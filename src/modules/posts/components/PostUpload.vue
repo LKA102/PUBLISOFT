@@ -1,11 +1,6 @@
 <template>
   <div class="post-upload-container">
     <div class="upload-input-wrapper">
-      <img
-        :src="authStore.user?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
-        alt="Avatar del usuario"
-        class="user-avatar"
-      />
       <input
         type="text"
         placeholder="¿Qué apunte publicarás hoy?"
@@ -20,41 +15,62 @@
         <h3>Crear Nueva Publicación</h3>
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label for="post-title">Título:</label>
-            <input type="text" id="post-title" v-model="post.title" required />
+            <label for="post-title">Título del Apunte:</label>
+            <input type="text" id="post-title" v-model="post.title" placeholder="Ej: Resumen de Álgebra Lineal" required />
           </div>
 
           <div class="form-group">
             <label for="post-cycle">Ciclo:</label>
-            <select id="post-cycle" v-model="selectedCycle" @change="fetchCoursesForCycle" required>
+            <select id="post-cycle" v-model="selectedCycle" @change="fetchCoursesForCycle" required :disabled="loadingCourses">
               <option value="" disabled>Selecciona un ciclo</option>
               <option v-for="cycle in uniqueCycles" :key="cycle" :value="cycle">{{ cycle }}</option>
             </select>
+            <p v-if="loadingCourses" class="hint-message">Cargando ciclos...</p>
+            <p v-else-if="uniqueCycles.length === 0" class="hint-message">No se encontraron ciclos.</p>
           </div>
 
           <div class="form-group">
             <label for="post-course">Curso:</label>
-            <select id="post-course" v-model="post.course" :disabled="!selectedCycle || loadingCourses" required>
-              <option value="" disabled>Selecciona un curso</option>
-              <option v-if="loadingCourses">Cargando cursos...</option>
+            <select id="post-course" v-model="post.course" required :disabled="!selectedCycle || loadingCourses">
+              <option value="" disabled>
+                {{ !selectedCycle ? 'Selecciona un ciclo primero' : (loadingCourses ? 'Cargando cursos...' : 'Selecciona un curso') }}
+              </option>
               <option v-for="course in filteredCourses" :key="course.course_code" :value="course.course_name">
                 {{ course.course_code }} - {{ course.course_name }}
               </option>
             </select>
-            <p v-if="!selectedCycle" class="hint-message">Selecciona un ciclo primero para ver los cursos.</p>
-            <p v-if="selectedCycle && filteredCourses.length === 0 && !loadingCourses" class="hint-message">No se encontraron cursos para este ciclo.</p>
+            <p v-if="!selectedCycle" class="hint-message">Selecciona un ciclo para ver los cursos.</p>
+            <p v-else-if="loadingCourses" class="hint-message">Cargando cursos del ciclo...</p>
+            <p v-else-if="filteredCourses.length === 0" class="hint-message">No se encontraron cursos para este ciclo.</p>
           </div>
 
           <div class="form-group">
             <label for="post-file">Archivo (PDF, DOCX, PPT, JPG, PNG):</label>
             <input type="file" id="post-file" @change="handleFileChange" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif" required />
             <p v-if="selectedFile" class="file-name">{{ selectedFile.name }}</p>
+            
+            <p v-if="processingFile" class="processing-message">
+              <i class="fas fa-spinner fa-spin"></i> Generando previsualización...
+            </p>
+            <p v-if="processedFileSize > 0" class="processed-info">
+              Tamaño original: {{ formatBytes(originalFileSize) }} -> Miniatura generada: {{ formatBytes(processedFileSize) }}
+            </p>
+            <p v-if="processingTime > 0" class="processed-info">
+              Tiempo de procesamiento: {{ processingTime.toFixed(2) }} ms
+            </p>
+
+            <div v-if="thumbnailUrl" class="thumbnail-preview">
+                <h4>Miniatura generada:</h4>
+                <img :src="thumbnailUrl" alt="Miniatura del documento" />
+            </div>
+
           </div>
 
           <div class="modal-actions">
             <button type="button" @click="closeModal" class="cancel-button">Cancelar</button>
-            <button type="submit" :disabled="loading">
+            <button type="submit" :disabled="loading || processingFile">
               <span v-if="loading">Subiendo...</span>
+              <span v-else-if="processingFile">Procesando...</span>
               <span v-else>Publicar</span>
             </button>
           </div>
@@ -68,15 +84,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { usePostStore } from '@modules/posts/stores/post';
-import { useAuthStore } from '@modules/auth/stores/auth'; // Importa el authStore
+import { useAuthStore } from '@modules/auth/stores/auth';
 import { storeToRefs } from 'pinia';
 import { supabase } from '@/services/supabase';
+import { generatePdfThumbnail, formatBytes } from '@modules/posts/stores/pdfThumbnailGenerator'; // Ruta actualizada
+import { processImageForThumbnail } from '@modules/posts/stores/imageProcessor'; // Importar nuevo procesador de imágenes
 
-// Agrega el authStore a las dependencias
 const authStore = useAuthStore();
-
 const postStore = usePostStore();
 const { loading, error } = storeToRefs(postStore);
 
@@ -84,47 +100,45 @@ const isModalOpen = ref(false);
 const post = ref({
   title: '',
   course: '',
-  cycle: '', // Ahora el ciclo se manejará a través de selectedCycle y se asignará aquí al submit
+  cycle: '',
+  // ¡Importante! Aquí vamos a agregar la thumbnail_url al objeto post
+  thumbnail_url: null, // Inicializar como nulo
 });
-const selectedFile = ref(null);
+const selectedFile = ref(null); // Archivo principal a subir
+const processingFile = ref(false);
+const originalFileSize = ref(0);
+const processedFileSize = ref(0);
+const processingTime = ref(0);
+const thumbnailUrl = ref(null); // URL temporal para la previsualización en el modal
 
-// Nuevos estados para ciclos y cursos
-const allCoursesData = ref([]); // Almacenará todos los cursos de Supabase
-const uniqueCycles = ref([]); // Almacenará los nombres de los ciclos únicos
-const selectedCycle = ref(''); // El ciclo seleccionado por el usuario
-const filteredCourses = ref([]); // Cursos filtrados por el ciclo seleccionado
-const loadingCourses = ref(false); // Estado de carga para los cursos
+const allCoursesData = ref([]);
+const uniqueCycles = ref([]);
+const selectedCycle = ref('');
+const filteredCourses = ref([]);
+const loadingCourses = ref(false);
 
-// --- Funciones para manejar Ciclos y Cursos ---
-
-// Función para obtener todos los cursos de Supabase y poblar los ciclos únicos
-const fetchAllCourses = async () => {
+const fetchAllCourses = async () => { /* ... tu implementación actual ... */ 
   loadingCourses.value = true;
   try {
     const { data, error } = await supabase
-      .from('courses_by_cycle') // Nombre de tu tabla en Supabase
+      .from('courses_by_cycle')
       .select('cycle_name, course_code, course_name')
       .order('cycle_name', { ascending: true })
-      .order('course_code', { ascending: true }); // Ordena para mejor visualización
+      .order('course_code', { ascending: true });
 
     if (error) throw error;
     allCoursesData.value = data;
-
-    // Extraer ciclos únicos
     const cycles = [...new Set(data.map(item => item.cycle_name))];
     uniqueCycles.value = cycles;
-
   } catch (err) {
     console.error('Error al cargar ciclos y cursos:', err.message);
-    // Podrías mostrar un mensaje de error en la UI si lo deseas
   } finally {
     loadingCourses.value = false;
   }
 };
 
-// Función para filtrar cursos cuando se selecciona un ciclo
-const fetchCoursesForCycle = () => {
-  post.value.course = ''; // Resetear el curso seleccionado al cambiar de ciclo
+const fetchCoursesForCycle = () => { /* ... tu implementación actual ... */ 
+  post.value.course = '';
   if (selectedCycle.value) {
     filteredCourses.value = allCoursesData.value.filter(course =>
       course.cycle_name === selectedCycle.value
@@ -134,22 +148,29 @@ const fetchCoursesForCycle = () => {
   }
 };
 
-// --- Watcher para actualizar post.cycle cuando selectedCycle cambia ---
 watch(selectedCycle, (newCycle) => {
   post.value.cycle = newCycle;
 });
 
-// --- Funciones del Modal ---
 const openModal = async () => {
   isModalOpen.value = true;
-  // Asegúrate de cargar los cursos solo una vez o cuando sea necesario
   if (uniqueCycles.value.length === 0) {
     await fetchAllCourses();
   }
-  // Resetear la selección al abrir el modal
   selectedCycle.value = '';
   post.value.course = '';
+  post.value.title = ''; // Asegúrate de resetear el título también
+  post.value.thumbnail_url = null; // Resetear la URL de la miniatura en el objeto post
   filteredCourses.value = [];
+
+  selectedFile.value = null;
+  processingFile.value = false;
+  originalFileSize.value = 0;
+  processedFileSize.value = 0;
+  processingTime.value = 0;
+  thumbnailUrl.value = null;
+  const fileInput = document.getElementById('post-file');
+  if (fileInput) fileInput.value = '';
 };
 
 const closeModal = () => {
@@ -157,22 +178,142 @@ const closeModal = () => {
   post.value.title = '';
   post.value.course = '';
   post.value.cycle = '';
+  post.value.thumbnail_url = null; // Resetear
   selectedFile.value = null;
   const fileInput = document.getElementById('post-file');
   if (fileInput) fileInput.value = '';
   
-  // Resetear estados de selección de ciclo y curso
   selectedCycle.value = '';
   filteredCourses.value = [];
+
+  processingFile.value = false;
+  originalFileSize.value = 0;
+  processedFileSize.value = 0;
+  processingTime.value = 0;
+  thumbnailUrl.value = null;
 };
 
-const handleFileChange = (event) => {
-  selectedFile.value = event.target.files.length > 0 ? event.target.files.item(0) : null;
+const handleFileChange = async (event) => {
+  const file = event.target.files.length > 0 ? event.target.files.item(0) : null;
+  selectedFile.value = null; 
+  originalFileSize.value = 0;
+  processedFileSize.value = 0;
+  processingTime.value = 0;
+  processingFile.value = false; 
+  thumbnailUrl.value = null;
+  post.value.thumbnail_url = null;
+
+  if (file) {
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    const fileType = file.type.split('/')[0];
+
+    if (fileExtension === 'pdf') {
+      processingFile.value = true;
+      originalFileSize.value = file.size;
+      try {
+        const { thumbnailBlob, processingTime: timeTaken, processedSize: newSize } = await generatePdfThumbnail(file);
+        
+        selectedFile.value = file; 
+        
+        // ****** FIX IS HERE ******
+        const { data: { user } } = await supabase.auth.getUser(); // AWAIT this line!
+        // **************************
+
+        if (!user) { // Add a check in case user is not logged in or session expired
+          throw new Error("No user found. Please log in again.");
+        }
+
+        const userId = user.id; // Access user.id directly
+        const thumbnailPath = `${userId}/${Date.now()}_thumb.jpeg`;
+        
+        const { data: thumbUploadData, error: thumbUploadError } = await supabase.storage
+          .from('thumbnails')
+          .upload(thumbnailPath, thumbnailBlob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/jpeg'
+          });
+
+        if (thumbUploadError) throw thumbUploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('thumbnails')
+          .getPublicUrl(thumbnailPath);
+
+        post.value.thumbnail_url = publicUrlData.publicUrl;
+        
+        processedFileSize.value = newSize;
+        processingTime.value = timeTaken;
+        thumbnailUrl.value = URL.createObjectURL(thumbnailBlob);
+
+      } catch (err) {
+        console.error('Error durante el procesamiento/subida de miniatura PDF:', err);
+        alert('Hubo un error al generar o subir la miniatura del PDF. El archivo principal se subirá, pero sin miniatura.');
+        selectedFile.value = file;
+        post.value.thumbnail_url = null;
+      } finally {
+        processingFile.value = false;
+      }
+    } 
+    // ... similar fix for the image handling block ...
+    else if (fileType === 'image' && ['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
+      processingFile.value = true;
+      originalFileSize.value = file.size;
+
+      try {
+        const { processedBlob, processingTime: timeTaken, processedSize: newSize } = await processImageForThumbnail(file);
+        
+        selectedFile.value = file;
+        
+        // ****** FIX IS HERE ******
+        const { data: { user } } = await supabase.auth.getUser(); // AWAIT this line!
+        // **************************
+
+        if (!user) { // Add a check
+          throw new Error("No user found. Please log in again.");
+        }
+
+        const userId = user.id; // Access user.id directly
+        const thumbnailPath = `${userId}/${Date.now()}_thumb.${processedBlob.type.split('/')[1]}`;
+
+        const { data: thumbUploadData, error: thumbUploadError } = await supabase.storage
+          .from('thumbnails')
+          .upload(thumbnailPath, processedBlob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: processedBlob.type
+          });
+
+        if (thumbUploadError) throw thumbUploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('thumbnails')
+          .getPublicUrl(thumbnailPath);
+
+        post.value.thumbnail_url = publicUrlData.publicUrl;
+        
+        processedFileSize.value = newSize;
+        processingTime.value = timeTaken;
+        thumbnailUrl.value = URL.createObjectURL(processedBlob);
+
+      } catch (err) {
+        console.error('Error durante el procesamiento/subida de miniatura de imagen:', err);
+        alert('Hubo un error al optimizar o subir la miniatura de la imagen. El archivo original se subirá, pero sin miniatura.');
+        selectedFile.value = file;
+        post.value.thumbnail_url = null;
+      } finally {
+        processingFile.value = false;
+      }
+    } 
+    else {
+      selectedFile.value = file;
+      post.value.thumbnail_url = null;
+    }
+  }
 };
 
 const handleSubmit = async () => {
-  // Validaciones actualizadas
-  if (!post.value.title || !post.value.course || !selectedCycle.value) { // Ahora validamos selectedCycle en lugar de post.cycle directamente
+  if (!post.value.title || !post.value.course || !selectedCycle.value) {
     alert('Por favor, completa todos los campos del formulario (Título, Ciclo y Curso).');
     return;
   }
@@ -181,7 +322,11 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Asignar el ciclo final al objeto post antes de subir
+  if (processingFile.value) {
+    alert('Por favor, espera a que el archivo termine de procesarse.');
+    return;
+  }
+
   post.value.cycle = selectedCycle.value;
 
   await postStore.uploadPost(post.value, selectedFile.value);
@@ -191,11 +336,16 @@ const handleSubmit = async () => {
   }
 };
 
-// --- Ciclo de Vida ---
 onMounted(() => {
-  // Opcional: Cargar los ciclos y cursos al montar el componente si el modal no es el único disparador
-  // Aunque ya lo hacemos al abrir el modal, si este componente pudiera ser usado sin abrir el modal
-  // y necesitara los datos, aquí sería un buen lugar. Por ahora, openModal es suficiente.
+    if (authStore.user && !authStore.userProfile) {
+      authStore.fetchUserProfile(authStore.user.id);
+    }
+});
+
+onUnmounted(() => {
+  if (thumbnailUrl.value) {
+    URL.revokeObjectURL(thumbnailUrl.value);
+  }
 });
 </script>
 <style scoped>
@@ -211,6 +361,48 @@ onMounted(() => {
   border-radius: 25px;
   padding: 8px 15px;
   transition: background-color 0.2s ease;
+}
+
+.processing-message {
+  color: #007bff;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.processing-message .fa-spinner {
+  margin-right: 8px;
+}
+
+.processed-info {
+  margin-top: 5px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.thumbnail-preview {
+    margin-top: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    text-align: center;
+}
+
+.thumbnail-preview h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.thumbnail-preview img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button[type="submit"]:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 .upload-input-wrapper:hover {
