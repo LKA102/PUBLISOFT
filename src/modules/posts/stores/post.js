@@ -83,7 +83,7 @@ export const usePostStore = defineStore('post', {
             cycle: postData.cycle,
             file_url: fileUrl, // URL del archivo principal
             file_type: fileType, // Tipo del archivo principal
-            thumbnail_url: postData.thumbnail_url || null, // <--- ESTO ES CLAVE: la URL de la miniatura viene de postData
+            thumbnail_url: postData.thumbnail_url, // <--- ESTO ES CLAVE: la URL de la miniatura viene de postData
           })
           .select(`
             *,

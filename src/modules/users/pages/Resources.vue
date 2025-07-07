@@ -62,40 +62,39 @@
         <p class="post-detail"><strong>Curso:</strong> {{ post.course }}</p>
         <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
 
-       <div v-if="post.file_url" class="post-file-preview-container">
-          <template v-if="post.thumbnail_url">
-            <img :src="post.thumbnail_url" :alt="post.title" class="file-preview-thumbnail" />
-            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
-              <i class="fas fa-eye"></i> Ver Completo
-            </a>
-          </template>
-          <template v-else-if="isImage(post.file_type)">
-            <img :src="post.file_url" :alt="post.title" class="file-preview-image" />
-            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
-              <i class="fas fa-eye"></i> Ver Completo
-            </a>
-          </template>
-          <template v-else-if="isPdf(post.file_type)">
-            <div class="pdf-icon-preview">
-                <i class="fas fa-file-pdf fa-5x"></i>
-                <p>Documento PDF</p>
-            </div>
-            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
-              <i class="fas fa-eye"></i> Ver Completo
-            </a>
-          </template>
-          <template v-else>
-            <div class="generic-file-icon-preview">
-                <i class="fas fa-file-alt fa-5x"></i>
-                <p>Archivo {{ post.file_type ? post.file_type.toUpperCase() : '' }}</p>
-            </div>
-            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
-              <i class="fas fa-download"></i> Descargar Archivo
-            </a>
-          </template>
+    <div v-if="post.file_url" class="post-file-preview-container">
+      <template v-if="post.thumbnail_url">
+        <img :src="post.thumbnail_url" :alt="post.title" class="file-preview-thumbnail" />
+        <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+          <i class="fas fa-eye"></i> Ver Completo
+        </a>
+      </template>
+      <template v-else-if="isImage(post.file_type)">
+        <img :src="post.file_url" :alt="post.title" class="file-preview-image" />
+        <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+          <i class="fas fa-eye"></i> Ver Completo
+        </a>
+      </template>
+      <template v-else-if="isPdf(post.file_type)">
+        <div class="pdf-icon-preview">
+          <i class="fas fa-file-pdf fa-5x"></i>
+          <p>Documento PDF</p>
         </div>
-
-         <RatingStars
+        <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+          <i class="fas fa-eye"></i> Ver Completo
+        </a>
+      </template>
+      <template v-else>
+        <div class="generic-file-icon-preview">
+          <i class="fas fa-file-alt fa-5x"></i>
+          <p>Archivo {{ post.file_type ? post.file_type.toUpperCase() : '' }}</p>
+        </div>
+        <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+          <i class="fas fa-download"></i> Descargar Archivo
+        </a>
+      </template>
+    </div>
+    <RatingStars
           :post-id="post.id"
           :initial-average-rating="post.average_rating"
           :initial-user-rating="post.user_rating"
@@ -518,49 +517,80 @@ const changePage = async (page) => {
   color: #333;
   font-size: 0.95em;
 }
-
-/* Contenedor de previsualización de archivos */
+/* Contenedor de previsualización de archivos - MODIFICADO */
 .post-file-preview-container {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
-  text-align: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    text-align: center;
+    position: relative; /* ¡CRÍTICO! Necesario para posicionar el overlay correctamente */
+    display: flex;      /* Usa flexbox para centrar el contenido */
+    flex-direction: column; /* Alinea los elementos verticalmente */
+    justify-content: center; /* Centra el contenido verticalmente */
+    align-items: center;   /* Centra el contenido horizontalmente */
+    min-height: 150px;     /* Asegura un espacio mínimo, ajusta si es necesario */
+    overflow: hidden;      /* Previene desbordamientos si la imagen es muy grande */
 }
 
-/* Estilos para imágenes de previsualización */
+/* NUEVO: Estilos para imágenes de miniaturas (usado por `post.thumbnail_url`) */
+.file-preview-thumbnail {
+    max-width: 100%;       /* Asegura que no se desborde del contenedor */
+    height: auto;          /* Mantiene la relación de aspecto */
+    max-height: 250px;     /* Altura máxima para las miniaturas, ajusta a tu gusto */
+    display: block;        /* Para que se comporte como un bloque y respete márgenes */
+    object-fit: contain;   /* Escala la imagen para que quepa completamente dentro de sus límites */
+    border-radius: 8px;    /* Consistente con otros elementos */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Consistente con otros elementos */
+    margin: 0 auto 10px auto; /* Centra horizontalmente y añade margen inferior */
+}
+
+/* Estilos para imágenes de previsualización (para cuando no hay miniatura y es una imagen original) - EXISTENTE */
 .file-preview-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  margin-bottom: 10px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
 }
 
-/* Estilos para PDF de previsualización */
+/* NUEVO: Estilos para el enlace/overlay que aparece sobre la miniatura */
+.file-link-overlay {
+    position: absolute; /* Posicionamiento absoluto respecto a .post-file-preview-container */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente oscuro */
+    color: white;
+    display: flex;
+    flex-direction: column; /* Icono y texto apilados */
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    font-weight: bold;
+    opacity: 0; /* Por defecto está oculto */
+    transition: opacity 0.3s ease; /* Transición suave para el efecto hover */
+    border-radius: 8px; /* Coincide con el border-radius de la miniatura */
+}
+
+/* Muestra el overlay al pasar el ratón por el contenedor */
+.post-file-preview-container:hover .file-link-overlay {
+    opacity: 1; /* Se hace visible al hacer hover */
+}
+
+.file-link-overlay i {
+    margin-bottom: 8px; /* Espacio entre el icono y el texto */
+    font-size: 1.5em; /* Tamaño del icono */
+}
+
+/* Estilos para PDF de previsualización (cuando se muestra el icono PDF, no la miniatura de imagen) - EXISTENTE */
 .file-preview-pdf {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  width: 100%;
-  min-height: 300px;
-  max-height: 600px;
-}
-
-/* Estilos para enlaces de archivo */
-.file-link {
-  color: #1877f2;
-  text-decoration: none;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.file-link:hover {
-  text-decoration: underline;
-}
-
-.file-link i {
-  margin-right: 8px;
-  font-size: 1.1em;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 100%;
+    min-height: 300px;
+    max-height: 600px;
+    /* Esto era para el iframe, no aplica si usas un icono como fallback */
+    /* Si lo que quieres es el icono de PDF, la clase no se usará aquí directamente */
 }
 </style>
