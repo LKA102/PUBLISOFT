@@ -1,38 +1,37 @@
 // src/modules/auth/stores/auth.js
 
 import { defineStore } from 'pinia';
-import { supabase } from '@/services/supabase'; // Asegúrate de que esta ruta es correcta
+import { supabase } from '@/services/supabase'; 
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null, // Contendrá el objeto de usuario de Supabase Auth y los datos de tu tabla 'users'
-    loading: true, // Indica si el estado general de autenticación está cargándose (sesión + perfil)
-    error: null, // Para manejar errores específicos
-    // profileLoading: false, // Ya no es estrictamente necesario si 'loading' lo abarca
+    user: null, 
+    loading: true, 
+    error: null, 
+    needsRating: false, 
   }),
 
+  // Todas las funciones que modifican el estado o realizan operaciones asíncronas deben ir aquí.
   actions: {
     /**
      * @description Inicializa el estado de autenticación y carga el perfil completo.
      * Esta es la función principal que se llamará al inicio de la aplicación.
      */
     async initializeAuth() {
-      this.loading = true; // Aseguramos que el estado de carga es true al inicio
+      this.loading = true; 
       this.error = null;
       try {
         console.log('AuthStore: initializeAuth - Obteniendo sesión de Supabase...');
-        const { data: { user } } = await supabase.auth.getUser(); 
-        
-        // Delegamos la lógica de actualización del usuario y carga del perfil a setUser
+        const { data: { user } = {} } = await supabase.auth.getUser(); // Añadir {} por si data es null/undefined
         await this.setUser(user); 
-        
         console.log('AuthStore: initializeAuth - Finalizado. User:', this.user);
       } catch (err) {
         this.error = err.message;
-        this.user = null; // En caso de error, aseguramos que no haya usuario
+        this.user = null; 
+        this.needsRating = false; 
         console.error('AuthStore: Error al inicializar autenticación o cargar perfil:', err.message);
       } finally {
-        this.loading = false; // Importante: el proceso de inicialización ha terminado
+        this.loading = false; 
       }
     },
 
@@ -42,27 +41,38 @@ export const useAuthStore = defineStore('auth', {
      * @param {object | null} userObj Objeto de usuario de Supabase Auth (puede ser null para logout).
      */
     async setUser(userObj) {
-      // Si no hay userObj, es un logout o usuario no autenticado
       if (!userObj) {
-        if (this.user !== null) { // Solo si había un usuario antes, limpiar
+        if (this.user !== null) { 
           this.user = null;
+          this.needsRating = false;
           console.log('AuthStore: Usuario limpiado (setUser con null).');
         }
         return;
       }
 
-      // Si el ID del usuario no ha cambiado Y ya tiene la propiedad 'role' (significa perfil cargado)
-      // Evitamos recargar el perfil si ya lo tenemos.
-      if (this.user?.id === userObj.id && this.user?.role) {
-        console.log('AuthStore: setUser - Usuario ya cargado con perfil completo, omitiendo re-fetch.');
-        return;
+      const currentUserId = this.user?.id;
+      const currentEnrichedRole = this.user?.role && this.user.role !== 'authenticated';
+      const incomingUserId = userObj.id;
+
+      if (!currentUserId || currentUserId !== incomingUserId || !currentEnrichedRole) {
+        console.log('AuthStore: setUser - Detecta necesidad de cargar/refrescar perfil completo.');
+        this.user = { ...userObj }; // Establece el usuario básico de Supabase Auth
+        await this.fetchUserProfile(userObj.id); // Carga y fusiona el perfil enriquecido
+      } else {
+        console.log('AuthStore: setUser - Usuario ya cargado con perfil completo, solo actualizando datos de sesión.');
+        // Actualizamos las propiedades básicas del userObj entrante, pero EXCLUIMOS 'role'
+        // para que no sobrescriba nuestro rol enriquecido si ya lo tenemos.
+        const { role: incomingRole, ...restOfUserObj } = userObj; // Desestructuramos para excluir 'role'
+
+        this.user = { ...this.user, ...restOfUserObj }; 
+        // Si incomingRole es 'authenticated' y this.user.role ya es 'student',
+        // queremos mantener 'student'. No lo fusionamos si ya hay un rol enriquecido.
       }
 
-      // Si es un nuevo usuario, o un usuario existente sin su perfil completo (ej. refresco de token)
-      console.log('AuthStore: setUser - detecta cambio/perfil incompleto. Cargando perfil...');
-      // Establecemos el usuario básico primero, luego lo enriqueceremos
-      this.user = userObj; 
-      await this.fetchUserProfile(userObj.id);
+      // SIEMPRE llamar a checkRatingRequirement si el usuario está autenticado y tiene un rol
+      if (this.isAuthenticated) { 
+        await this.checkRatingRequirement();
+      }
     },
 
     /**
@@ -81,7 +91,6 @@ export const useAuthStore = defineStore('auth', {
           throw error; 
         }
         
-        // Usa setUser para actualizar el estado del store, incluyendo la carga del perfil
         await this.setUser(data.user); 
         
         console.log('AuthStore: login - Usuario logueado e info actualizada.');
@@ -103,29 +112,6 @@ export const useAuthStore = defineStore('auth', {
         this.loading = true;
         this.error = null;
         try {
-            // 1. Validar el dominio del email
-        //if (!email.endsWith('@unmsm.edu.pe')) {
-       //   throw new Error('Dominio de correo inválido. Solo se permiten correos de @unmsm.edu.pe');
-       // }
-        //console.log('Dominio de email válido.');
-
-        // 2. Verificar el código institucional en la tabla 'verifications'
-        //console.log('Verificando código institucional...');
-        //const { data: verificationData, error: verificationError } = await supabase
-          //.from('verifications')
-          //.select('valid')
-          //.eq('code', code)
-          //.eq('email', email)
-          //.single();
-
-        //if (verificationError) {
-        //  throw new Error(`Error al verificar código institucional: ${verificationError.message}`);
-        //}
-        //if (!verificationData || !verificationData.valid) {
-        //  throw new Error('Código institucional o correo electrónico inválido(s) o ya utilizado(s).');
-        //}
-        //console.log('Código institucional verificado y válido.');
-            
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
@@ -143,7 +129,7 @@ export const useAuthStore = defineStore('auth', {
                         email: authData.user.email,
                         role: role,
                         alias: alias,
-                        avatar_url: " ", // Puedes poner un valor por defecto
+                        avatar_url: " ", 
                     }])
                     .select()
                     .single();
@@ -153,9 +139,6 @@ export const useAuthStore = defineStore('auth', {
                 }
                 console.log('AuthStore: register - Insertado en tabla users:', userData);
 
-                // Después de la creación de un nuevo usuario, actualizamos el store
-                // con el usuario básico y luego con su perfil completo.
-                // Usamos setUser para asegurar que la info del perfil se obtiene.
                 await this.setUser(authData.user);
 
                 if (role === 'student') {
@@ -171,17 +154,6 @@ export const useAuthStore = defineStore('auth', {
                     if (adminError) throw new Error(`AuthStore: Error al insertar en 'admins': ${adminError.message}`);
                     console.log('AuthStore: register - Insertado en tabla admins.');
                 }
-
-                // Descomenta si usas la tabla 'verifications'
-                /*
-                const { error: updateVerificationError } = await supabase
-                    .from('verifications')
-                    .update({ valid: false })
-                    .eq('code', code)
-                    .eq('email', email);
-                if (updateVerificationError) console.warn('AuthStore: No se pudo actualizar verificación:', updateVerificationError.message);
-                */
-
                 return { success: true };
             }
 
@@ -199,7 +171,6 @@ export const useAuthStore = defineStore('auth', {
      * @param {string} userId El ID del usuario de Supabase Auth.
      */
     async fetchUserProfile(userId) {
-      // this.profileLoading = true; // No lo necesitamos si 'loading' es el estado global
       this.error = null; 
       try {
         console.log('AuthStore: fetchUserProfile - Cargando perfil para userId:', userId);
@@ -213,15 +184,10 @@ export const useAuthStore = defineStore('auth', {
           throw error;
         }
 
-        // Combina la información de Supabase Auth (this.user) con los datos del perfil
-        // Asegúrate de que this.user ya tiene la info básica del usuario antes de esta línea
-        if (this.user) {
-          this.user = { ...this.user, ...data };
-        } else {
-          // Esto debería ser un caso de borde, pero si this.user es null, crearlo
-          this.user = data; 
-        }
-
+        // Importante: No sobrescribir completamente this.user aquí si ya tiene propiedades del perfil enriquecido.
+        // Solo fusionar los datos nuevos.
+        this.user = { ...this.user, ...data }; 
+        
         if (data.students && data.students.length > 0) {
           this.user.code = data.students[0].code;
         }
@@ -229,10 +195,6 @@ export const useAuthStore = defineStore('auth', {
       } catch (err) {
         this.error = err.message;
         console.error('AuthStore: Error al cargar el perfil del usuario:', err.message);
-        // Podrías decidir limpiar el usuario si el perfil es crítico para la experiencia
-        // this.user = null; 
-      } finally {
-        // this.profileLoading = false; // No lo necesitamos
       }
     },
 
@@ -248,7 +210,8 @@ export const useAuthStore = defineStore('auth', {
         if (error) {
           throw error;
         }
-        this.user = null; // Limpiar el estado del usuario
+        this.user = null; 
+        this.needsRating = false; 
         console.log('AuthStore: Sesión cerrada.');
         return { success: true };
       } catch (err) {
@@ -259,13 +222,55 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false; 
       }
     },
+
+    /**
+     * @description Verifica si un usuario estudiante ha valorado un post hoy.
+     * Actualiza la propiedad `needsRating` del store.
+     */
+    async checkRatingRequirement() {
+        if (!this.user || this.user.role !== 'student') {
+            this.needsRating = false;
+            return;
+        }
+
+        let lastRatingDate = null;
+        try {
+            const { data: dateData, error: rpcError } = await supabase.rpc('get_user_last_rating_date', { p_user_id: this.user.id });
+            
+            if (rpcError) {
+                console.error('AuthStore: Error al obtener la última fecha de rating desde RPC:', rpcError.message);
+                this.needsRating = true; 
+                return;
+            }
+
+            if (dateData) {
+                lastRatingDate = new Date(dateData);
+                lastRatingDate.setUTCHours(0, 0, 0, 0); 
+            }
+        } catch (error) {
+            console.error('AuthStore: Error inesperado en checkRatingRequirement:', error.message);
+            this.needsRating = true; 
+            return;
+        }
+        
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0); 
+
+        if (!lastRatingDate || lastRatingDate < today) {
+            this.needsRating = true;
+            console.log('AuthStore: Usuario estudiante necesita valorar un post (último rating: %s).', lastRatingDate ? lastRatingDate.toISOString() : 'nunca');
+        } else {
+            this.needsRating = false;
+            console.log('AuthStore: Usuario estudiante ya valoró un post hoy (último rating: %s).', lastRatingDate.toISOString());
+        }
+    },
   },
 
   getters: {
-    // Solo es autenticado si hay un usuario, tiene un ID Y tiene un rol (significa que el perfil está cargado)
     isAuthenticated: (state) => !!state.user && !!state.user.id && !!state.user.role, 
     isAdmin: (state) => state.user?.role === 'admin',
-    // La aplicación está cargando el estado de autenticación (sesión o perfil)
+    isTeacher: (state) => state.user?.role === 'teacher', 
+    isStudent: (state) => state.user?.role === 'student', 
     isAuthLoading: (state) => state.loading, 
   }
 });
