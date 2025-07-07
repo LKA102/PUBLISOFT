@@ -129,6 +129,60 @@ export const usePostStore = defineStore('post', {
           p_cycle: cycle || null
         });
 
+
+        //  // Aplicar filtro de búsqueda por texto
+        // if (filters.searchTerm) {
+        //   const searchTerm = `%${filters.searchTerm.toLowerCase()}%`;
+        //   query = query.or(`title.ilike.${searchTerm},course.ilike.${searchTerm},cycle.ilike.${searchTerm}`);
+        // }
+
+        // // Aplicar filtro por curso
+        // if (filters.course) {
+        //   query = query.eq('course', filters.course);
+        // }
+
+        // // Aplicar filtro por ciclo
+        // if (filters.cycle) {
+        //   query = query.eq('cycle', filters.cycle);
+        // }
+
+        //      // **********************************************
+        // // *** NUEVA LÓGICA CLAVE: Filtrar por rol del autor ***
+        // // **********************************************
+        // if (filters.authorRole) {
+        //   // Si queremos filtrar por 'role' de la tabla 'users' que está unida.
+        //   // Supabase's `select` con joins como `users(role)` permite filtrar,
+        //   // pero el `.eq` directo sobre la columna anidada es más reciente o requiere sintaxis específica.
+        //   // La forma más robusta es obtener los IDs de los usuarios con ese rol primero y luego filtrar por `user_id`.
+          
+        //   const { data: usersWithRole, error: usersError } = await supabase
+        //     .from('users')
+        //     .select('id')
+        //     .eq('role', filters.authorRole); // Aquí filtramos en la tabla 'users' directamente
+
+        //   if (usersError) {
+        //     console.error('Error al obtener IDs de usuarios por rol:', usersError.message);
+        //     throw usersError;
+        //   }
+
+        //   const userIdsWithRole = usersWithRole.map(user => user.id);
+          
+        //   if (userIdsWithRole.length > 0) {
+        //     query = query.in('user_id', userIdsWithRole); // Filtra los posts por esos IDs
+        //   } else {
+        //     // Si no hay usuarios con ese rol, no debería mostrar posts, 
+        //     // así que forzamos un resultado vacío para evitar cargar todos los posts.
+        //     this.posts = [];
+        //     this.loading = false;
+        //     return; 
+        //   }
+        // }
+        // // **********************************************
+
+        // query = query.order('created_at', { ascending: false });
+
+        // const { data, error } = await query;
+
         if (error) throw error;
 
         if (reset) {

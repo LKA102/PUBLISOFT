@@ -2,48 +2,46 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
-import router from './router'; // Si usas Vue Router
+import router from './router'; // Importa tu Vue Router
 import { supabase } from '@/services/supabase'; // Tu archivo de configuración de Supabase
 import { useAuthStore } from '@/modules/auth/stores/auth'; // Tu store de autenticación
-// Asegúrate de que tu CSS de Tailwind se importa en algún lugar
-import './assets/css/global.css'; // Añadido
-import './assets/tailwind.css'; // La ruta correcta si el archivo está en src/assets/
 
-const app = createApp(App);
-const pinia = createPinia();
+// Importa tus archivos CSS principales
+import './assets/css/global.css'; // Asegúrate de que esta ruta es correcta
+import './assets/tailwind.css'; // Asegúrate de que esta ruta es correcta
+// Si tienes otros archivos CSS, impórtalos aquí:
+// import './assets/styles/global.css'; 
+// import './assets/styles/variables.css'; 
+// import './assets/styles/forms.css'; 
+// import './assets/styles/buttons.css'; 
+// import '@fortawesome/fontawesome-free/css/all.css'; // Para los iconos de Font Awesome si los usas
 
-app.use(pinia);
-app.use(router);
+async function initializeAndMountApp() {
+  const app = createApp(App);
+  const pinia = createPinia();
 
-// *** LÓGICA CLAVE AQUÍ ***
-// Escuchar cambios en el estado de autenticación de Supabase
-supabase.auth.onAuthStateChange((event, session) => {
-  const authStore = useAuthStore(); // Obtener la instancia del store
+  app.use(pinia); // Primero, usa Pinia para que los stores estén disponibles
 
-  if (session) {
-    // Si hay una sesión, establecer el usuario en el store
-    console.log('Auth state changed: LOGGED_IN', session.user);
-    authStore.setUser(session.user); // Llama a la acción setUser que creamos
-  } else {
-    // Si no hay sesión (logout o no autenticado), limpiar el usuario
-    console.log('Auth state changed: LOGGED_OUT');
-    authStore.setUser(null);
-  }
-});
+  const authStore = useAuthStore(); // Obtener la instancia del authStore
+  
+  // *** CRUCIAL: Inicializar el estado de autenticación ANTES de montar el router ***
+  console.log('main.js: Iniciando inicialización de autenticación...');
+  await authStore.initializeAuth(); 
+  console.log('main.js: Autenticación inicializada. User:', authStore.user);
 
-// Opcional: Cargar el usuario inicial si ya hay una sesión al cargar la app
-// Esto es útil si el listener no se dispara inmediatamente al cargar
-async function initializeAuth() {
-  const { data: { user } } = await supabase.auth.getUser();
-  const authStore = useAuthStore();
-  if (user) {
-    authStore.setUser(user);
-  } else {
-    authStore.setUser(null);
-  }
+  // *** Escuchar cambios de autenticación en tiempo real después de la inicialización ***
+  // Esto es para reaccionar a login/logout/refresh de token mientras la app está corriendo
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('main.js: onAuthStateChange - Event:', event, 'Session:', session);
+    // Usa la acción setUser del store para actualizar el estado, que a su vez cargará el perfil
+    await authStore.setUser(session ? session.user : null); 
+  });
+
+  app.use(router); // Ahora, usa el router, el cual ya tendrá el estado de autenticación inicial listo
+
+  app.mount('#app'); // Monta la aplicación en el DOM
+  console.log('main.js: Aplicación Vue montada.');
 }
-initializeAuth().then(() => {
-    app.mount('#app');
-});
 
-// app.mount('#app'); // Mueve esta línea dentro del .then() de initializeAuth
+// Llama a la función de inicialización asíncrona
+initializeAndMountApp();

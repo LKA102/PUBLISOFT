@@ -70,20 +70,38 @@
           <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
 
         <div v-if="editingPost?.id === post.id" class="edit-post-inline">
+          <div class="form-group">
             <label>Título:</label>
             <input v-model="editedTitle" class="profile-input" />
-
-            <label>Curso:</label>
-            <input v-model="editedCourse" class="profile-input" />
-
-            <label>Ciclo:</label>
-            <input v-model="editedCycle" class="profile-input" />
-
-            <div class="edit-buttons">
-              <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
-              <button @click="cancelEdit" class="delete-student-button">Cancelar</button>
-            </div>
           </div>
+
+          <div class="form-group">
+            <label>Ciclo:</label>
+            <select v-model="editedCycle" class="profile-input" @change="fetchCoursesForEdit(editedCycle)" required>
+              <option value="" disabled>Selecciona un ciclo</option>
+              <option v-for="cycle in uniqueCycles" :key="cycle" :value="cycle">
+                {{ cycle }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Curso:</label>
+            <select v-model="editedCourse" class="profile-input" :disabled="!editedCycle || loadingCourses" required>
+              <option value="" disabled>Selecciona un curso</option>
+              <option v-if="loadingCourses">Cargando cursos...</option>
+              <option v-for="course in filteredCoursesForEdit" :key="course.course_code" :value="course.course_name">
+                {{ course.course_code }} - {{ course.course_name }}
+              </option>
+            </select>
+            <p v-if="!editedCycle" class="hint-message">Selecciona un ciclo primero para ver los cursos.</p>
+          </div>
+
+          <div class="edit-buttons">
+            <button @click="saveEditedPost" class="save-profile-button">Guardar Cambios</button>
+            <button @click="cancelEdit" class="delete-student-button">Cancelar</button>
+          </div>
+        </div>
 
           <div v-if="post.average_rating !== undefined" class="post-rating">
             <strong>Estrellas:</strong>
@@ -111,23 +129,7 @@
       </div>
 </section>
 
-    <section v-if="authStore.user?.role === 'admin'" class="admin-section">
-      <h2>Gestión de Estudiantes</h2>
-      <p v-if="!allStudents || allStudents.length === 0" class="status-message">No hay estudiantes registrados.</p>
-      <div v-else class="student-list">
-        <ul>
-          <li v-for="student in allStudents" :key="student.id" class="student-item">
-            <span>
-              {{ student.alias || student.email }}
-              <span v-if="student.student_code">(Código: {{ student.student_code }})</span>
-            </span>
-            <button @click="confirmDeleteStudent(student.id)" class="delete-student-button">Eliminar</button>
-          </li>
-        </ul>
-      </div>
-      <p v-if="deleteStudentError" class="error-message">{{ deleteStudentError }}</p>
-      <p v-if="deleteStudentSuccess" class="success-message">{{ deleteStudentSuccess }}</p>
-    </section>
+    
 
       <!-- MODAL para Editar Publicación -->
   <div v-if="showEditModal" class="modal-overlay">
@@ -150,31 +152,37 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'; // Importa onUnmounted
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useAuthStore } from '@modules/auth/stores/auth';
 import { usePostStore } from '@modules/posts/stores/post';
-import { supabase } from '@/services/supabase'; // Importa supabase para operaciones directas (avatar, updateUser, admin delete)
-import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
-import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
+import { supabase } from '@/services/supabase';
+import { useNotificationStore } from '@modules/notifications/stores/notification';
+import TheHeader from '@/components/TheHeader.vue';
 
 // Variables de estado para editar
 const showEditModal = ref(false);
-const editingPost = ref(null); // Publicación que estamos editando
+const editingPost = ref(null);
 const editedTitle = ref('');
 const editedCourse = ref('');
 const editedCycle = ref('');
 
+// --- Nuevos estados para manejar cursos y ciclos ---
+const allCoursesData = ref([]);
+const uniqueCycles = ref([]);
+const filteredCoursesForEdit = ref([]);
+const loadingCourses = ref(false);
+
 // --- Stores ---
 const authStore = useAuthStore();
 const postStore = usePostStore();
-const notificationStore = useNotificationStore(); // Instancia el store de notificaciones
+const notificationStore = useNotificationStore();
 
 // --- Estados Locales para Edición de Perfil ---
 const editableAlias = ref('');
 const newPassword = ref('');
 const updateError = ref(null);
 const updateSuccess = ref(null);
-const avatarFileInput = ref(null); // Ref para el input de archivo oculto
+const avatarFileInput = ref(null);
 
 // --- Estados Locales para Notificaciones ---
 const showNotifications = ref(false);
@@ -192,20 +200,55 @@ const myPosts = computed(() => {
   return [];
 });
 
+// --- Funciones para manejar cursos y ciclos ---
+const fetchAllCourses = async () => {
+  loadingCourses.value = true;
+  try {
+    const { data, error } = await supabase
+      .from('courses_by_cycle')
+      .select('cycle_name, course_code, course_name')
+      .order('cycle_name', { ascending: true })
+      .order('course_code', { ascending: true });
+
+    if (error) throw error;
+    allCoursesData.value = data;
+
+    // Extraer ciclos únicos
+    const cycles = [...new Set(data.map(item => item.cycle_name))];
+    uniqueCycles.value = cycles;
+
+  } catch (err) {
+    console.error('Error al cargar ciclos y cursos:', err.message);
+  } finally {
+    loadingCourses.value = false;
+  }
+};
+
+const fetchCoursesForEdit = (cycle) => {
+  if (!cycle) {
+    filteredCoursesForEdit.value = [];
+    return;
+  }
+  
+  loadingCourses.value = true;
+  filteredCoursesForEdit.value = allCoursesData.value.filter(
+    course => course.cycle_name === cycle
+  );
+  loadingCourses.value = false;
+};
+
 // --- Watchers ---
 watch(() => authStore.user, async (newUser) => {
   if (newUser?.alias) {
     editableAlias.value = newUser.alias;
   }
-  // Si el usuario cambia o se carga, (re)establece las notificaciones en tiempo real
   if (newUser?.id) {
-    //await notificationStore.fetchNotifications(); // Carga inicial
-    notificationStore.setupRealtimeNotifications(); // Inicia la suscripción
+    notificationStore.setupRealtimeNotifications();
     if (newUser.role === 'admin') {
       await fetchAllStudents();
     }
   } else {
-    notificationStore.unsubscribeRealtimeNotifications(); // Limpia la suscripción si no hay usuario
+    notificationStore.unsubscribeRealtimeNotifications();
   }
 }, { immediate: true });
 
@@ -215,35 +258,29 @@ onMounted(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
       await authStore.fetchUserProfile(currentUser.id);
-      // Aquí, si el usuario está logueado y llegamos a esta página,
-      // podríamos querer cargar las notificaciones con el límite por defecto (para el badge).
-      // Aunque el watcher de `authStore.user` ya lo hace implícitamente al inicializar.
     }
+    // Cargar los cursos al montar el componente
+    await fetchAllCourses();
+    postStore.fetchPosts();
   } catch (err) {
     console.error('Error al obtener usuario actual o perfil en Mount:', err.message);
   }
-  postStore.fetchPosts();
 });
-
 
 onUnmounted(() => {
-  // Asegúrate de limpiar la suscripción de Supabase Realtime cuando el componente se desmonte
   notificationStore.unsubscribeRealtimeNotifications();
 });
-
-
 
 // --- Funciones de Edición de Perfil ---
 const updateProfile = async () => {
   updateError.value = null;
   updateSuccess.value = null;
-  authStore.loading = true; // Usa el estado de carga del store de autenticación
+  authStore.loading = true;
 
   try {
     let profileUpdated = false;
     let authUserUpdated = false;
 
-    // 1. Actualizar Alias en la tabla 'users'
     if (editableAlias.value !== authStore.user?.alias) {
       const { error: profileError } = await supabase
         .from('users')
@@ -254,7 +291,6 @@ const updateProfile = async () => {
       profileUpdated = true;
     }
 
-    // 2. Actualizar Contraseña en Supabase Auth
     if (newPassword.value) {
       const { error: authError } = await supabase.auth.updateUser({
         password: newPassword.value,
@@ -264,10 +300,9 @@ const updateProfile = async () => {
     }
 
     if (profileUpdated || authUserUpdated) {
-      // Si algo se actualizó, refrescar los datos del usuario en el store
       await authStore.fetchUserProfile(authStore.user.id);
       updateSuccess.value = 'Perfil actualizado exitosamente.';
-      newPassword.value = ''; // Limpiar el campo de contraseña
+      newPassword.value = '';
     } else {
       updateSuccess.value = 'No se realizaron cambios en el perfil.';
     }
@@ -281,7 +316,7 @@ const updateProfile = async () => {
 };
 
 const openAvatarUpload = () => {
-  avatarFileInput.value.click(); // Simula un clic en el input de tipo file oculto
+  avatarFileInput.value.click();
 };
 
 const handleAvatarChange = async (event) => {
@@ -294,27 +329,23 @@ const handleAvatarChange = async (event) => {
 
   try {
     const fileExt = file.name.split('.').pop();
-    // Path único para el avatar en el storage (ej. 'user_id/timestamp.ext')
     const filePath = `${authStore.user.id}/${Date.now()}.${fileExt}`;
 
-    // Subir el archivo al bucket 'avatars'
     const { error: uploadError } = await supabase.storage
-      .from('avatars') // Asegúrate de que este sea el nombre de tu bucket
+      .from('avatars')
       .upload(filePath, file, {
-        cacheControl: '3600', // Caching por una hora
-        upsert: true, // Sobrescribe si el archivo ya existe
+        cacheControl: '3600',
+        upsert: true,
       });
 
     if (uploadError) throw new Error(`Error al subir avatar: ${uploadError.message}`);
 
-    // Obtener la URL pública del avatar subido
     const { data: publicUrlData } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
     const newAvatarUrl = publicUrlData.publicUrl;
 
-    // Actualizar la columna 'avatar_url' en la tabla 'users'
     const { error: updateErrorDb } = await supabase
       .from('users')
       .update({ avatar_url: newAvatarUrl })
@@ -322,7 +353,6 @@ const handleAvatarChange = async (event) => {
 
     if (updateErrorDb) throw new Error(`Error al actualizar URL del avatar en DB: ${updateErrorDb.message}`);
 
-    // Refrescar los datos del usuario en el store para que la UI se actualice
     await authStore.fetchUserProfile(authStore.user.id);
     updateSuccess.value = 'Avatar actualizado exitosamente.';
 
@@ -338,19 +368,16 @@ const handleAvatarChange = async (event) => {
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value;
   if (showNotifications.value) {
-    // Cargar un máximo de 20 notificaciones para el dropdown
     notificationStore.fetchNotifications(20);
   }
 };
 
 const markAllAsRead = async () => {
   await notificationStore.markAllAsRead();
-  // Después de marcar como leídas, recargamos con el límite del dropdown
   notificationStore.fetchNotifications(20);
 };
 
-
-// --- Funciones de Utilidad de Posts (copiadas de Feed.vue) ---
+// --- Funciones de Utilidad de Posts ---
 const isImage = (fileType) => {
   if (!fileType) return false;
   const lowerCaseType = fileType.toLowerCase();
@@ -362,7 +389,7 @@ const isPdf = (fileType) => {
   return fileType.toLowerCase() === 'pdf';
 };
 
-// --- Acciones de Posts (Editar/Eliminar propias publicaciones) ---
+// --- Acciones de Posts ---
 function editPost(postId) {
   const post = myPosts.value.find(p => p.id === postId);
   if (post) {
@@ -370,6 +397,10 @@ function editPost(postId) {
     editedTitle.value = post.title;
     editedCourse.value = post.course;
     editedCycle.value = post.cycle;
+    // Cargar cursos para el ciclo de la publicación que se está editando
+    if (post.cycle) {
+      fetchCoursesForEdit(post.cycle);
+    }
   }
 }
 
@@ -389,8 +420,6 @@ const saveEditedPost = async () => {
 
     showEditModal.value = false;
     editingPost.value = null;
-    
-    // Opcional: mostrar notificación de éxito
     alert('¡Publicación actualizada correctamente!');
   } catch (err) {
     console.error('Error en saveEditedPost:', err);
@@ -401,8 +430,6 @@ const saveEditedPost = async () => {
 const confirmDeletePost = async (postId) => {
   if (confirm('¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.')) {
     try {
-      // Necesitarás implementar una acción 'deletePost' en tu postStore.js
-      // que haga supabase.from('posts').delete().eq('id', postId);
       const { error: deleteError } = await supabase
         .from('posts')
         .delete()
@@ -411,7 +438,6 @@ const confirmDeletePost = async (postId) => {
       if (deleteError) throw deleteError;
 
       alert('Publicación eliminada exitosamente.');
-      // Después de eliminar, recargar las publicaciones para actualizar la lista
       postStore.fetchPosts();
     } catch (error) {
       alert('Error al eliminar publicación: ' + error.message);
@@ -419,112 +445,6 @@ const confirmDeletePost = async (postId) => {
     }
   }
 };
-
-
-// --- Funciones de Administración (Eliminar Estudiantes) ---
-const fetchAllStudents = async () => {
-  deleteStudentError.value = null;
-  try {
-    // Busca usuarios con rol 'student'.
-    // Asumo que 'student_code' está directamente en la tabla 'users' o que la relación es simple.
-    // Si 'student_code' está en una tabla 'students' separada y no la obtienes automáticamente
-    // a través de la relación de Supabase, necesitarás un JOIN o una lógica adicional.
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, alias, role, students(code)') // Selecciona 'students(code)' para obtener el código si existe
-      .eq('role', 'student');
-
-    if (error) throw error;
-
-    // Mapea los datos para incluir el código de estudiante directamente
-    allStudents.value = data.map(user => ({
-      ...user,
-      student_code: user.students?.[0]?.code || 'N/A' // Extrae el código si existe
-    }));
-
-  } catch (err) {
-    deleteStudentError.value = `Error al cargar estudiantes: ${err.message}`;
-    console.error('Error fetching all students:', err);
-  }
-};
-
-const confirmDeleteStudent = async (studentIdToDelete) => {
-  if (confirm('¡ADVERTENCIA! ¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a este estudiante y todos sus datos?')) {
-    await deleteStudent(studentIdToDelete);
-  }
-};
-
-const deleteStudent = async (studentIdToDelete) => {
-    deleteStudentError.value = null;
-    deleteStudentSuccess.value = null;
-    try {
-        // --- ADVERTENCIA DE SEGURIDAD CRÍTICA ---
-        // Eliminar usuarios y sus datos asociados directamente desde el cliente NO es lo más seguro ni robusto.
-        // Lo *altamente* recomendado es:
-        // 1. Crear una función de PostgreSQL en Supabase que reciba el user_id y realice la eliminación en cascada (students, posts, users, auth.users).
-        // 2. Crear una Supabase Edge Function que llame a esa función de PostgreSQL.
-        // 3. Llamar a la Edge Function desde el cliente.
-        // Esto asegura que la eliminación sea atómica, segura (usando Service Role Key en el backend) y consistente.
-        // La implementación a continuación es solo para fines de demostración/prueba y podría tener problemas de permisos o consistencia con RLS estrictas.
-
-        // 1. Eliminar publicaciones del estudiante
-        console.log(`Eliminando publicaciones del usuario ${studentIdToDelete}...`);
-        const { error: postsDeleteError } = await supabase
-            .from('posts')
-            .delete()
-            .eq('user_id', studentIdToDelete);
-        if (postsDeleteError) {
-            console.warn(`Advertencia: No se pudieron eliminar todas las publicaciones del estudiante: ${postsDeleteError.message}`);
-            // No lanzamos error para permitir que continúe con la eliminación del usuario,
-            // pero es importante registrar esto.
-        }
-
-        // 2. Eliminar de la tabla 'students' (si aplica)
-        console.log(`Eliminando de la tabla students al usuario ${studentIdToDelete}...`);
-        const { error: studentDeleteError } = await supabase
-            .from('students')
-            .delete()
-            .eq('user_id', studentIdToDelete);
-
-        if (studentDeleteError) {
-            console.error('Error deleting from students:', studentDeleteError.message);
-            throw new Error(`Error al eliminar datos de estudiante: ${studentDeleteError.message}`);
-        }
-
-        // 3. Eliminar de la tabla 'users' (perfil)
-        console.log(`Eliminando de la tabla users al usuario ${studentIdToDelete}...`);
-        const { error: userProfileDeleteError } = await supabase
-            .from('users')
-            .delete()
-            .eq('id', studentIdToDelete);
-
-        if (userProfileDeleteError) {
-            console.error('Error deleting from users:', userProfileDeleteError.message);
-            throw new Error(`Error al eliminar perfil de usuario: ${userProfileDeleteError.message}`);
-        }
-
-        // 4. Eliminar de Supabase Auth (auth.users)
-        // ESTO REQUIERE PERMISOS DE ADMINISTRADOR EN SUPABASE.
-        // Si usas RLS en auth.users, esta operación desde el cliente fallará
-        // a menos que el usuario logueado tenga permisos muy elevados
-        // o si usas la clave de servicio (que NO debe estar en el cliente).
-        console.log(`Eliminando de auth.users al usuario ${studentIdToDelete}...`);
-        const { error: authDeleteError } = await supabase.auth.admin.deleteUser(studentIdToDelete);
-
-        if (authDeleteError) {
-            console.error('Error deleting from auth.users:', authDeleteError.message);
-            throw new Error(`Error al eliminar usuario de autenticación: ${authDeleteError.message}. Necesitas usar una función de servidor con la clave de servicio.`);
-        }
-
-        deleteStudentSuccess.value = 'Estudiante y todos sus datos eliminados exitosamente.';
-        alert(deleteStudentSuccess.value);
-        await fetchAllStudents(); // Refrescar la lista de estudiantes
-    } catch (err) {
-        deleteStudentError.value = err.message || 'Error desconocido al eliminar estudiante.';
-        console.error('Error deleting student:', err);
-    }
-};
-
 </script>
 
 <style scoped>
