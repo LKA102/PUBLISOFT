@@ -13,14 +13,12 @@
 
     <nav class="nav-menu">
       <ul>
-        <li v-for="item in navItems" :key="item.path" :class="{ 'active': isActive(item.path) }">
+        <li v-for="item in filteredNavItems" :key="item.path" :class="{ 'active': isActive(item.path) }">
           <router-link :to="item.path" class="nav-item">
             <i :class="item.icon"></i>
             <span class="nav-text">{{ item.label }}</span>
           </router-link>
         </li>
-        <li v-if="authStore.isAdmin">
-      </li>
       </ul>
     </nav>
   </aside>
@@ -39,8 +37,16 @@ const navItems = [
   { path: '/notifications', label: 'Notificaciones', icon: 'fas fa-bell' },
   { path: '/ranking', label: 'Ranking', icon: 'fas fa-trophy' },
   { path: '/resources', label: 'Recursos académicos', icon: 'fas fa-book' },
-  { path: '/dashboard', label: 'Panel admin', icon: 'fas fa-tools' }
+  { path: '/dashboard', label: 'Panel admin', icon: 'fas fa-tools', adminOnly: true }
 ];
+
+const filteredNavItems = computed(() => {
+  return navItems.filter(item => {
+    // Mostrar todos los items excepto los adminOnly si no es admin
+    // O mostrar todos si es admin
+    return !item.adminOnly || (item.adminOnly && authStore.isAdmin);
+  });
+});
 
 const isActive = (path) => {
   return route.path.startsWith(path);

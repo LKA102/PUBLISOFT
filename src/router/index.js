@@ -66,7 +66,10 @@ const routes = [
         path: '/dashboard',
         name: 'Dashboard',
         component: () => import('@/modules/admi/pages/Dashboard.vue'),
-        meta: { requiresAuth: true } // Requiere autenticación Y rol de admin
+        meta: { 
+          requiresAuth: true,
+          requiresAdmin: true // Nuevo meta campo
+        }
       },
       {
       path: '/rate-mandatory', // ¡NUEVA RUTA para la valoración obligatoria!
@@ -92,6 +95,14 @@ const router = createRouter({
 // Guardia de navegación global
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
+
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    console.warn("RouterGuard: Acceso denegado. Se requiere rol de administrador.");
+    // Puedes redirigir a una página de "no autorizado" o al feed
+    return next({ name: 'Feed' });
+    // O mostrar un mensaje de error:
+    // return next({ name: 'Unauthorized' });
+  }
 
   // Paso 1: Si el store está en estado de carga inicial, espera a que se resuelva.
   // Esto asegura que `isAuthenticated`, `user.role` y `needsRating` sean precisos.
