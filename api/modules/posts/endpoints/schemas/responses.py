@@ -12,6 +12,7 @@ class PostResponse(BaseModel):
     category: str
     type: str
     score_avg: float
+    author_id: UUID
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 

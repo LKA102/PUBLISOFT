@@ -27,6 +27,7 @@ class PostsMapper:
             type=type,
             scores=scores,
             score_avg=post_orm.score_avg,
+            author_id=post_orm.author_id,
             **base_kwargs,
         )
 
@@ -44,6 +45,7 @@ class PostsMapper:
         post_orm.type = post.type.value
         post_orm.scores = scores
         post_orm.score_avg = post.score_avg
+        post_orm.author_id = post.author_id
 
         # Only set ID if it's not the placeholder UUID
         if post.id and post.id != UUID(int=0):

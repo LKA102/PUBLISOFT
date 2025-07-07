@@ -1,7 +1,7 @@
 from modules.posts.domain.entities.base_entity import BaseEntity
 from modules.posts.domain.value_objects.vo import CategoryVO, ScoreVO
 
-# from modules.posts.domain.events.post_events import ScorePostEvent
+from modules.posts.domain.events.post_events import ScorePostEvent
 from modules.posts.domain.events.post_events import PostCreatedEvent
 
 from typing import List
@@ -27,6 +27,7 @@ class Post(BaseEntity):
         self.__type: PostTypeEnum = kwargs.get("type")
         self.__scores: List[ScoreVO] = kwargs.get("scores")
         self.__score_avg: float = kwargs.get("score_avg")
+        self.__author_id: UUID = kwargs.get("author_id")
 
         self.events = set()
 
@@ -65,6 +66,10 @@ class Post(BaseEntity):
     @property
     def score_avg(self) -> float:
         return self.__score_avg
+
+    @property
+    def author_id(self) -> UUID:
+        return self.__author_id
 
     @title.setter
     def title(self, value: str):
@@ -108,6 +113,12 @@ class Post(BaseEntity):
             raise ValueError("Score average must be a float")
         self.__score_avg = value
 
+    @author_id.setter
+    def author_id(self, value: UUID):
+        if not isinstance(value, UUID):
+            raise ValueError("Author ID must be a UUID")
+        self.__author_id = value
+
     @classmethod
     def create(
         cls,
@@ -116,10 +127,14 @@ class Post(BaseEntity):
         original_filename: str,
         category: CategoryVO,
         post_type: PostTypeEnum,
+        author_id: UUID,
     ) -> "Post":
 
         if not title or len(title) == 0:
             raise ValueError("Title must be a non-empty string")
+
+        if not author_id:
+            raise ValueError("Author ID is required")
 
         post_id = UUID(int=0)  # Placeholder ID
         created_at = updated_at = datetime.now(timezone.utc)
@@ -133,6 +148,7 @@ class Post(BaseEntity):
             type=post_type,
             scores=[],
             score_avg=0.0,
+            author_id=author_id,
             created_at=created_at,
             updated_at=updated_at,
         )
@@ -164,8 +180,7 @@ class Post(BaseEntity):
             self.__scores
         )
 
-        # TODO: uncomment when Notifications aggregate is implemented
-        # post_score_event = ScorePostEvent(
-        #     post_id=self.id, student_id=student_id, score=score
-        # )
-        # self.events.add(post_score_event)
+        post_score_event = ScorePostEvent(
+            post_id=self.id, student_id=student_id, score=score
+        )
+        self.events.add(post_score_event)

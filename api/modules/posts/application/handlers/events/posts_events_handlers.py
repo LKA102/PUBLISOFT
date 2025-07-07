@@ -7,8 +7,6 @@ class PostsEventHandler:
     def handle_score_post_event(
         event: ScorePostEvent, uok: SqlAlchemyUnitOfWork
     ):
-        # TODO: remove return when Notifications aggregate is implemented
-        return
         with uok:
             post = uok.posts_repository.load(event.post_id)
             if not post:
@@ -23,9 +21,9 @@ class PostsEventHandler:
             + event.score,
         }
 
-        from modules.notifications.public_api.contracts import (
-            NotificationsPublicAPI,
+        from modules.notifications.public_api.notify import (
+            NotificationPublicAPI,
         )
 
-        notifications_api = NotificationsPublicAPI()
-        notifications_api.send_notification(notification)
+        notifications_api = NotificationPublicAPI()
+        notifications_api.create_notification(notification)

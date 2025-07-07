@@ -110,6 +110,7 @@ class PostsCommandHandler:
                 original_filename=command.file.filename,
                 category=category,
                 post_type=post_type,
+                author_id=command.author_id,
             )
 
             saved_post = uok.posts_repository.save(post)

@@ -72,6 +72,7 @@ def get_post(
         category=str(post.category),
         type=post.type.value,
         score_avg=post.score_avg,
+        author_id=post.author_id,
         created_at=post.created_at,
         updated_at=post.updated_at,
     )
@@ -82,6 +83,7 @@ def create_post(
     title: str = Form(...),
     category: str = Form(...),
     post_type: str = Form(...),
+    author_id: str = Form(...),
     upload_file: UploadFile = None,
     uok: SqlAlchemyUnitOfWork = Depends(get_unit_of_work),
     message_bus: MessageBus = Depends(get_message_bus),
@@ -92,6 +94,7 @@ def create_post(
             file=upload_file,
             category=CategoryVO(name=category),
             type=PostTypeEnum(post_type),
+            author_id=UUID(author_id),
         )
 
         results = message_bus.handle(command, uok)
@@ -107,6 +110,7 @@ def create_post(
                 category=str(created_post.category),
                 type=created_post.type.value,
                 score_avg=created_post.score_avg,
+                author_id=created_post.author_id,
                 created_at=created_post.created_at,
                 updated_at=created_post.updated_at,
             ),
@@ -155,6 +159,7 @@ def update_post(
                 category=str(updated_post.category),
                 type=updated_post.type.value,
                 score_avg=updated_post.score_avg,
+                author_id=updated_post.author_id,
                 created_at=updated_post.created_at,
                 updated_at=updated_post.updated_at,
             ),

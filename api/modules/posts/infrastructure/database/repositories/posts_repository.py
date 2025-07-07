@@ -46,6 +46,7 @@ class PostsRepositorySQLAlchemy(IPostRepository):
             existing_post_orm.type = post_orm.type
             existing_post_orm.scores = post_orm.scores
             existing_post_orm.score_avg = post_orm.score_avg
+            existing_post_orm.author_id = post_orm.author_id
             PostsMapper.base_entity_to_orm(post, existing_post_orm)
             return PostsMapper.to_entity(existing_post_orm)
         else:
