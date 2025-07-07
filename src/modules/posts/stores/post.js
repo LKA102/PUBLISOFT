@@ -1,16 +1,21 @@
 // src/stores/post.js
 import { defineStore } from 'pinia';
 import { supabase } from '@/services/supabase';
-import { useAuthStore } from '@modules/auth/stores/auth'; // Necesitamos el usuario actual
+import { useAuthStore } from '@/modules/auth/stores/auth';
 
 export const usePostStore = defineStore('post', {
   state: () => ({
     posts: [],
     loading: false,
     error: null,
-    allCoursesByCycleData: [],
-    courses: [], // Nuevo estado para almacenar cursos únicos
-    cycles: [],  // Nuevo estado para almacenar ciclos únicos
+    total: 0,
+    currentPage: 1,
+    itemsPerPage: 5,
+    filters: {
+      searchTerm: '',
+      course: '',
+      cycle: ''
+    }
   }),
 
   actions: {
@@ -96,68 +101,84 @@ export const usePostStore = defineStore('post', {
       }
     },
 
-    async fetchPosts(filters = {}) {
+    async fetchPosts(options = {}) {
+      // Evita múltiples llamadas simultáneas
+      if (this.loading) return;
+      
       this.loading = true;
       this.error = null;
-      // Obtener el ID del usuario actual para saber su calificación
-      const authStore = useAuthStore();
-      const currentUserId = authStore.user?.id;
+      
+      const {
+        page = 1,
+        reset = true,
+        searchTerm = this.filters.searchTerm,
+        course = this.filters.course,
+        cycle = this.filters.cycle
+      } = options;
 
       try {
-        let query = supabase
-          .from('posts')
-          .select(`
-            *,
-            users (alias, email, avatar_url, role),
-            ratings (rating, user_id)
-          `);
+        const offset = (page - 1) * this.itemsPerPage;
+        const currentUserId = useAuthStore().user?.id || null;
 
-        // Aplicar filtro de búsqueda por texto
-        if (filters.searchTerm) {
-          const searchTerm = `%${filters.searchTerm.toLowerCase()}%`;
-          query = query.or(`title.ilike.${searchTerm},course.ilike.${searchTerm},cycle.ilike.${searchTerm}`);
-        }
-
-        // Aplicar filtro por curso
-        if (filters.course) {
-          query = query.eq('course', filters.course);
-        }
-
-        // Aplicar filtro por ciclo
-        if (filters.cycle) {
-          query = query.eq('cycle', filters.cycle);
-        }
-
-        query = query.order('created_at', { ascending: false });
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc('get_posts_with_ratings_paginated', {
+          p_user_id: currentUserId,
+          p_limit: this.itemsPerPage,
+          p_offset: offset,
+          p_search_term: searchTerm || null,
+          p_course: course || null,
+          p_cycle: cycle || null
+        });
 
         if (error) throw error;
 
-        this.posts = data.map(post => {
-          // Calcular el promedio de ratings para cada post
-          const totalRating = post.ratings.reduce((sum, r) => sum + r.rating, 0);
-          const averageRating = post.ratings.length > 0 ? totalRating / post.ratings.length : 0;
+        if (reset) {
+          // Solo resetea si se solicita explícitamente
+          this.posts = data.posts || [];
+        } else {
+          // Para scroll infinito, concatena los resultados
+          this.posts = [...this.posts, ...(data.posts || [])];
+        }
+        
+        this.total = data.total || 0;
+        this.currentPage = page;
+        this.filters = { searchTerm, course, cycle };
 
-          // Encontrar la calificación del usuario actual para este post
-          // Busca en `post.ratings` si hay una calificación de `currentUserId`
-          const currentUserRating = post.ratings.find(
-            rating => rating.user_id === currentUserId
-          );
-          
-          return {
-            ...post,
-            average_rating: averageRating,
-            user_rating: currentUserRating ? currentUserRating.rating : 0 // ¡AQUÍ ESTÁ LA CORRECCIÓN!
-          };
+        console.log('Posts loaded:', {
+          posts: this.posts,
+          total: this.total,
+          filters: this.filters
         });
 
       } catch (err) {
         this.error = err.message;
-        console.error('Error fetching posts:', err.message);
+        console.error('Error fetching posts:', err);
+        this.posts = [];
+        this.total = 0;
       } finally {
         this.loading = false;
       }
+    },
+
+    async applyFilters(filters = {}) {
+      return this.fetchPosts({
+        ...filters,
+        reset: true
+      });
+    },
+
+    async loadMorePosts() {
+      if (this.posts.length >= this.total) return;
+      return this.fetchPosts({
+        page: this.currentPage + 1
+      });
+    },
+
+    async clearFilters() {
+      return this.applyFilters({
+        searchTerm: '',
+        course: '',
+        cycle: ''
+      });
     },
 
     async fetchAllCoursesByCycleData() {

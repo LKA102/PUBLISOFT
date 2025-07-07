@@ -42,14 +42,14 @@
         <div class="post-header">
           <router-link :to="`/users/${post.user_id}`" class="post-author-link">
           <img
-            :src="post.users?.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
+            :src="post.avatar_url || 'https://via.placeholder.com/40/CCCCCC/FFFFFF?text=AV'"
             alt="Avatar del autor"
             class="post-avatar"
           />
            </router-link>
           <div class="post-info">
             <span class="post-author">
-              {{ post.users ? post.users.alias || post.users.email : 'Usuario Desconocido' }}
+              {{ post.alias || post.email || 'Usuario Desconocido' }}
             </span>
             <span class="post-date">
               {{ new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) }}
@@ -83,73 +83,117 @@
 
       </div>
     </div>
+    <div class="pagination-bar" v-if="totalPages > 1">
+      <button 
+        v-for="page in totalPages" 
+        :key="page" 
+        :class="{ 'active-page': page === postStore.currentPage }" 
+        @click="changePage(page)"
+        :disabled="page === postStore.currentPage"
+      >
+        {{ page }}
+      </button>
+    </div>
+
+    <p class="page-status">
+      Mostrando {{ postStore.posts.length }} de {{ postStore.total }} publicaciones
+    </p>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'; // Importa 'ref'
+import { onMounted, ref, computed, onUnmounted } from 'vue';
 import { usePostStore } from '@modules/posts/stores/post';
 import { useAuthStore } from '@modules/auth/stores/auth';
 import { useRouter } from 'vue-router';
-import TheHeader from '@/components/TheHeader.vue'; // <-- ¡IMPORTA EL NUEVO COMPONENTE DE HEADER!
-import PostUpload from '@modules/posts/components/PostUpload.vue'
-import RatingStars from '@modules/ranking/components/RatingStars.vue'
-import { useNotificationStore } from '@modules/notifications/stores/notification'; // Asegúrate de que esta ruta sea correcta
+import TheHeader from '@/components/TheHeader.vue';
+import PostUpload from '@modules/posts/components/PostUpload.vue';
+import RatingStars from '@modules/ranking/components/RatingStars.vue';
+import { useNotificationStore } from '@modules/notifications/stores/notification';
 
+function debounce(fn, delay) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// Stores
 const postStore = usePostStore();
 const authStore = useAuthStore();
 const router = useRouter();
-const notificationStore = useNotificationStore(); // INSTANCIAR EL STORE
-// Estados para la búsqueda y filtros
+const notificationStore = useNotificationStore();
+
+// Estados para filtros
 const searchTerm = ref('');
 const selectedCourse = ref('');
 const selectedCycle = ref('');
 
-// Función para aplicar los filtros (llamará al store)
-const applyFilters = () => {
-  const filters = {
-    searchTerm: searchTerm.value,
-    course: selectedCourse.value,
-    cycle: selectedCycle.value,
-  };
-  postStore.fetchPosts(filters);
-};
+// Estados UI
+const dropdownOpen = ref(false);
+const showNotifications = ref(false);
 
-// Función para limpiar los filtros
-const clearFilters = () => {
+// Computed
+const totalPages = computed(() => Math.ceil(postStore.total / postStore.itemsPerPage));
+const currentItemsCount = computed(() => `${postStore.posts.length} de ${postStore.total}`);
+
+const hasMore = computed(() => {
+  return postStore.posts.length < postStore.total;
+});
+
+// Funciones de filtrado
+const applyFilters = debounce(async () => {
+  await postStore.fetchPosts({
+    searchTerm: searchTerm.value || null,
+    course: selectedCourse.value || null,
+    cycle: selectedCycle.value || null,
+    reset: true
+  });
+}, 300); 
+
+const clearFilters = async () => {
   searchTerm.value = '';
   selectedCourse.value = '';
   selectedCycle.value = '';
-  applyFilters(); // Vuelve a cargar todas las publicaciones
+  await postStore.fetchPosts({ reset: true });
 };
 
+// Carga más posts al hacer scroll (scroll infinito)
+const handleScroll = async () => {
+  if (postStore.loading || postStore.posts.length >= postStore.total) return;
+  
+  const scrollPosition = window.innerHeight + window.scrollY;
+  const documentHeight = document.body.offsetHeight;
+  const nearBottom = scrollPosition >= documentHeight - 500;
 
-
-const dropdownOpen = ref(false); // Estado para controlar la visibilidad del desplegable
-// --- Estados Locales para Notificaciones ---
-const showNotifications = ref(false); // PARA CONTROLAR LA VISIBILIDAD DEL DROPDOWN DE NOTIFICACIONES
-
-const toggleDropdown = () => {
-  dropdownOpen.value = !dropdownOpen.value;
-};
-
-// --- Funciones de Notificaciones ---
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value;
-  if (showNotifications.value) {
-    // Cargar un máximo de 20 notificaciones para el dropdown
-    notificationStore.fetchNotifications(20);
+  if (nearBottom) {
+    await postStore.fetchPosts({
+      page: postStore.currentPage + 1,
+      searchTerm: searchTerm.value,
+      course: selectedCourse.value,
+      cycle: selectedCycle.value,
+      reset: false
+    });
   }
 };
 
+// Funciones de UI
+const toggleDropdown = () => dropdownOpen.value = !dropdownOpen.value;
+const toggleNotifications = async () => {
+  showNotifications.value = !showNotifications.value;
+  if (showNotifications.value) {
+    await notificationStore.fetchNotifications(20);
+  }
+};
 const markAllAsRead = async () => {
   await notificationStore.markAllAsRead();
-  // Después de marcar como leídas, recargamos con el límite del dropdown
-  notificationStore.fetchNotifications(20);
+  await notificationStore.fetchNotifications(20);
 };
-
-
-// Cierra el desplegable si se hace clic fuera
+const handleLogout = async () => {
+  await authStore.signOut();
+  router.push('/login');
+};
 const handleClickOutside = (event) => {
   const dropdown = document.querySelector('.dropdown-container');
   if (dropdown && !dropdown.contains(event.target)) {
@@ -157,67 +201,98 @@ const handleClickOutside = (event) => {
   }
 };
 
-const handleLogout = async () => {
-  await authStore.signOut();
-  router.push('/login');
-};
-
-// --- Ciclo de Vida ---
-onMounted(async () => {
-  if (authStore.user) {
-    await postStore.fetchPosts();
-    // Iniciar las notificaciones en tiempo real al cargar el feed
-    notificationStore.setupRealtimeNotifications();
-    // Opcional: cargar las notificaciones iniciales para el badge (sin el dropdown abierto)
-    await notificationStore.fetchNotifications(20); // Carga inicial para el contador
-  }
-});
-
-onMounted(async () => {
-  if (authStore.user) {
-    // Cargar los cursos y ciclos únicos (independientemente)
-    await postStore.fetchUniqueCourses();
-    await postStore.fetchUniqueCycles();
-    
-    // Cargar publicaciones con los filtros iniciales (vacíos)
-    applyFilters();
-    
-   
-  }
-});
-
-onUnmounted(() => {
-  // Asegúrate de desuscribirte de las notificaciones al salir del Feed
-  notificationStore.unsubscribeRealtimeNotifications();
-});
-
+// Helpers
 const isImage = (fileType) => {
   if (!fileType) return false;
-  const lowerCaseType = fileType.toLowerCase();
-  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(lowerCaseType);
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileType.toLowerCase());
 };
+const isPdf = (fileType) => fileType?.toLowerCase() === 'pdf';
 
-const isPdf = (fileType) => {
-  if (!fileType) return false;
-  return fileType.toLowerCase() === 'pdf';
-};
-
+// Ciclo de vida
 onMounted(async () => {
-  await authStore.fetchUserProfile(authStore.user?.id); 
-  await postStore.fetchPosts();
-  // Agrega el event listener al montar el componente
-  document.addEventListener('click', handleClickOutside);
+  if (authStore.user) {
+    try {
+      await authStore.fetchUserProfile(authStore.user.id);
+      await Promise.all([
+        postStore.fetchUniqueCourses(),
+        postStore.fetchUniqueCycles()
+      ]);
+      
+      // Carga inicial sin parámetros
+      await postStore.fetchPosts();
+      
+      notificationStore.setupRealtimeNotifications();
+    } catch (error) {
+      console.error('Initialization error:', error);
+    }
+  }
 });
 
-// Limpia el event listener al desmontar el componente
-import { onUnmounted } from 'vue';
 onUnmounted(() => {
+  notificationStore.unsubscribeRealtimeNotifications();
   document.removeEventListener('click', handleClickOutside);
 });
+
+const changePage = async (page) => {
+  await postStore.fetchPosts({
+    page,
+    searchTerm: searchTerm.value,
+    course: selectedCourse.value,
+    cycle: selectedCycle.value,
+    reset: true
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 </script>
 
+
 <style scoped>
-/* Mantén tus estilos existentes y agrega/modifica estos */
+/* --- ESTILOS PARA PAGINACIÓN --- */
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 25px 0;
+  flex-wrap: wrap;
+}
+
+.pagination-bar button {
+  padding: 8px 12px;
+  min-width: 36px;
+  background-color: #f0f2f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95em;
+}
+
+.pagination-bar button:hover {
+  background-color: #e4e6eb;
+  border-color: #ccc;
+}
+
+.pagination-bar button.active-page {
+  background-color: #1877f2;
+  color: white;
+  border-color: #1877f2;
+  font-weight: bold;
+}
+
+.page-status {
+  text-align: center;
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+.pagination-bar button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #1877f2;
+  color: white;
+}
 
 /* Estilos generales del contenedor principal */
 .feed-page {
