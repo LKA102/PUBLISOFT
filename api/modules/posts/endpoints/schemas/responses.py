@@ -5,16 +5,16 @@ from uuid import UUID
 
 
 class PostResponse(BaseModel):
-    id: UUID
+    id: str
     title: str
     file_url: str
     original_filename: str
     category: str
     type: str
     score_avg: float
-    author_id: UUID
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    author_id: str
+    created_at: Optional[str]
+    updated_at: Optional[str]
 
 
 class CreatePostResponse(BaseModel):

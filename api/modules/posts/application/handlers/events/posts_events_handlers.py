@@ -18,7 +18,7 @@ class PostsEventHandler:
             "type": "APPRECIATION",
             "title": "Te han calificado",
             "message": "Se ha calificado tu publicación con una puntuación de "
-            + event.score,
+            + str(event.score),
         }
 
         from modules.notifications.public_api.notify import (

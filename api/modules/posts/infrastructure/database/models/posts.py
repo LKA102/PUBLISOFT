@@ -1,6 +1,6 @@
 from common.session import Base
 
-from modules.auth.infrastructure.database.models.base_entity import (
+from modules.posts.infrastructure.database.models.base_entity import (
     BaseEntitySQLAlchemy,
 )
 
