@@ -62,16 +62,35 @@
         <p class="post-detail"><strong>Curso:</strong> {{ post.course }}</p>
         <p class="post-detail"><strong>Ciclo:</strong> {{ post.cycle }}</p>
 
-        <div v-if="post.file_url" class="post-file-preview-container">
-          <template v-if="isImage(post.file_type)">
+       <div v-if="post.file_url" class="post-file-preview-container">
+          <template v-if="post.thumbnail_url">
+            <img :src="post.thumbnail_url" :alt="post.title" class="file-preview-thumbnail" />
+            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+              <i class="fas fa-eye"></i> Ver Completo
+            </a>
+          </template>
+          <template v-else-if="isImage(post.file_type)">
             <img :src="post.file_url" :alt="post.title" class="file-preview-image" />
+            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+              <i class="fas fa-eye"></i> Ver Completo
+            </a>
           </template>
           <template v-else-if="isPdf(post.file_type)">
-            <iframe :src="post.file_url" width="100%" height="400px" class="file-preview-pdf" frameborder="0"></iframe>
+            <div class="pdf-icon-preview">
+                <i class="fas fa-file-pdf fa-5x"></i>
+                <p>Documento PDF</p>
+            </div>
+            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+              <i class="fas fa-eye"></i> Ver Completo
+            </a>
           </template>
           <template v-else>
-            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link">
-              <i class="fas fa-file-alt"></i> Ver Archivo ({{ post.file_type ? post.file_type.toUpperCase() : 'Archivo' }})
+            <div class="generic-file-icon-preview">
+                <i class="fas fa-file-alt fa-5x"></i>
+                <p>Archivo {{ post.file_type ? post.file_type.toUpperCase() : '' }}</p>
+            </div>
+            <a :href="post.file_url" target="_blank" rel="noopener noreferrer" class="file-link-overlay">
+              <i class="fas fa-download"></i> Descargar Archivo
             </a>
           </template>
         </div>

@@ -452,7 +452,11 @@ button[type="submit"]:disabled {
   background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro semitransparente */
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* CAMBIO CLAVE 1: Permite que el modal se pegue más arriba si es muy largo */
+  align-items: flex-start; /* Cambiado de 'center' a 'flex-start' */
+  padding: 20px; /* Añade un poco de padding para que no toque los bordes de la pantalla */
+  box-sizing: border-box; /* Asegura que el padding se incluya en el tamaño */
+  overflow-y: auto; /* Permite desplazamiento en el overlay si el modal es aún más grande que la pantalla */
   z-index: 1000; /* Asegura que esté por encima de todo */
 }
 
@@ -465,6 +469,34 @@ button[type="submit"]:disabled {
   max-width: 550px; /* Ancho máximo del modal */
   position: relative;
   animation: fadeInScale 0.3s ease-out; /* Animación de entrada */
+  
+  /* CAMBIO CLAVE 2: Permitir desplazamiento interno si el contenido es demasiado alto */
+  max-height: 90vh; /* Ajusta a un porcentaje de la altura del viewport. Puedes probar con 80vh o 90vh */
+  overflow-y: auto; /* Agrega scroll vertical si el contenido excede el max-height */
+  
+  /* CAMBIO OPCIONAL: Ajustar padding para evitar que el scrollbar se superponga al contenido */
+  padding-right: 35px; /* Un poco más de padding a la derecha para el scrollbar */
+}
+
+/* Ajusta el padding-right si tienes inputs con width: calc(100% - 22px); */
+/* Por ejemplo, en los input[type="text"] y select */
+input[type="text"],
+input[type="file"],
+select { /* Aplica esto a todos los inputs y selects */
+  width: 100%; /* Ahora que el padding-right está en el modal, los inputs pueden ser 100% */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 1em;
+}
+
+/* Asegúrate de que el padding-right no afecte la posición del botón de cerrar */
+.close-modal-button {
+  position: absolute;
+  top: 15px;
+  right: 15px; /* Mantenlo relativo al borde del modal, no del padding interno */
+  /* ... otros estilos ... */
 }
 
 @keyframes fadeInScale {
